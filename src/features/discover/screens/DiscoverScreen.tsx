@@ -31,9 +31,9 @@ type DiscoverNavProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 
 const FILTER_CATEGORIES = [
-  { id: 'Easy', label: 'Dá»…' },
-  { id: 'Moderate', label: 'Trung BÃ¬nh' },
-  { id: 'Hard', label: 'KhÃ³' },
+  { id: 'Easy', label: 'Dễ' },
+  { id: 'Moderate', label: 'Trung Bình' },
+  { id: 'Hard', label: 'Khó' },
 ];
 
 type BackendDiscoverTour = Partial<Tour> & {
@@ -359,11 +359,11 @@ export const DiscoverScreen: React.FC = () => {
         <View style={styles.quickCardsRow}>
           <View style={styles.quickCard}>
             <MaterialCommunityIcons name="crown-outline" size={26} color="#0A2518" />
-            <Text style={styles.quickCardText}>Tá»•ng tour: {tours.length}</Text>
+            <Text style={styles.quickCardText}>Tổng tour: {tours.length}</Text>
           </View>
           <View style={styles.quickCard}>
             <Ionicons name="map-outline" size={24} color="#0A2518" />
-            <Text style={styles.quickCardText}>Káº¿t quáº£: {filteredTours.length}</Text>
+            <Text style={styles.quickCardText}>Khám phá: {filteredTours.length}</Text>
           </View>
         </View>
 
