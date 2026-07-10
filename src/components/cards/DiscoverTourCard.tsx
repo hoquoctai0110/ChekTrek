@@ -27,13 +27,25 @@ const getDifficultyLabel = (difficulty: PublicTourListItem['tour']['difficulty']
 
 export const DiscoverTourCard: React.FC<DiscoverTourCardProps> = ({ item, onPress }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [hasImageError, setHasImageError] = useState(false);
   const { tour, card } = item;
   const ratingValue = useMemo(() => extractShortRating(card.ratingText), [card.ratingText]);
 
   return (
     <View style={styles.tourCard}>
       <View style={styles.imageContainer}>
-        <Image source={{ uri: card.imageUrl }} style={styles.image} resizeMode="cover" />
+        {hasImageError || !card.imageUrl ? (
+          <View style={[styles.image, styles.imageFallback]}>
+            <Ionicons name="image-outline" size={28} color="rgba(10, 37, 24, 0.45)" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: card.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setHasImageError(true)}
+          />
+        )}
         <TouchableOpacity
           style={styles.heartBtn}
           onPress={() => setIsLiked(previousValue => !previousValue)}
@@ -105,6 +117,11 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  imageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5EEFF',
   },
   heartBtn: {
     position: 'absolute',

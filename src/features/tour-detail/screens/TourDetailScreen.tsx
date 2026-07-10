@@ -24,8 +24,7 @@ import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'reac
 import { useSavedStore } from '@store/savedStore';
 import { toursApi } from '@services/api/tours.api';
 import { reviewsApi, TourReview, TourReviewSummary } from '@services/api/reviews.api';
-import { PLACEHOLDER_IMAGES } from '@constants/index';
-import { formatTourDistance, TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
+import { formatTourDistance } from '@constants/tourDisplay';
 import { getRouteDistanceKm, loadRouteById } from '@services/tours/publicTours';
 import { Tour, TourDifficulty, TourStatus } from '../../../types';
 
@@ -105,6 +104,20 @@ const toStringArray = (value: unknown): string[] => {
   return [];
 };
 
+const mergeUniqueStrings = (...groups: string[][]): string[] => {
+  const seen = new Set<string>();
+
+  return groups.flat().filter(value => {
+    const normalizedValue = String(value ?? '').trim();
+    if (!normalizedValue || seen.has(normalizedValue)) {
+      return false;
+    }
+
+    seen.add(normalizedValue);
+    return true;
+  });
+};
+
 const formatDurationLabel = (duration: string): string => {
   const normalizedDuration = duration.trim();
   if (!normalizedDuration) return '--';
@@ -124,12 +137,12 @@ const formatReviewDate = (value?: string): string => {
 };
 
 const mapBackendTourDetail = (tour: BackendTourDetail): TourDetail => {
-  const imageUrls = [
-    ...toStringArray(tour.imageUrls),
-    ...toStringArray(tour.thumbnailUrl),
-    ...toStringArray(tour.imageUrl),
-    ...toStringArray(tour.coverImageUrl),
-  ];
+  const imageUrls = mergeUniqueStrings(
+    toStringArray(tour.coverImageUrl),
+    toStringArray(tour.thumbnailUrl),
+    toStringArray(tour.imageUrl),
+    toStringArray(tour.imageUrls),
+  );
   const destination =
     tour.destination ??
     tour.destinationName ??
@@ -146,8 +159,8 @@ const mapBackendTourDetail = (tour: BackendTourDetail): TourDetail => {
     description: tour.description ?? 'Chưa có mô tả cho tour này.',
     destination,
     province: tour.province ?? destination,
-    imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
-    thumbnailUrl: imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR,
+    imageUrls,
+    thumbnailUrl: imageUrls[0] ?? '',
     difficulty: normalizeDifficulty(tour.difficulty),
     distance:
       toNullableNumber(tour.distance ?? tour.distanceKm ?? tour.route?.distanceKm) ?? Number.NaN,
@@ -194,6 +207,8 @@ export const TourDetailScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [distanceKm, setDistanceKm] = useState<number | null | undefined>(undefined);
+  const [hasHeroImageError, setHasHeroImageError] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const isSaved = useSavedStore(state => state.savedTourIds.includes(tourId));
   const toggleSaved = useSavedStore(state => state.toggleSaved);
@@ -211,6 +226,8 @@ export const TourDetailScreen: React.FC = () => {
       console.log('[TourDetail] raw API duration =', response.duration);
       const mappedTour = mapBackendTourDetail(response as unknown as BackendTourDetail);
       console.log('[TourDetail] mapped duration =', mappedTour.duration);
+      setHasHeroImageError(false);
+      setSelectedImageIndex(0);
       setDistanceKm(
         Number.isFinite(mappedTour.distance)
           ? mappedTour.distance
@@ -368,8 +385,11 @@ export const TourDetailScreen: React.FC = () => {
     distanceKm === undefined
       ? '--'
       : formatTourDistance(distanceKm, distanceKm === null ? null : 'km');
-  const displayedRating = reviewSummary.averageRating;
-  const displayedReviewCount = reviewSummary.reviewCount;
+  const displayedRating = Number(reviewSummary.averageRating ?? 0);
+  const displayedReviewCount = Number(reviewSummary.reviewCount ?? 0);
+  const galleryImages = tour.imageUrls.filter(Boolean);
+  const heroImageSource =
+    galleryImages[selectedImageIndex] ?? galleryImages[0] ?? tour.thumbnailUrl ?? '';
   const handleOpenRouteMap = () => {
     if (!tour.routeId) {
       Alert.alert('Chưa có lộ trình', 'Tour này hiện chưa có dữ liệu bản đồ lộ trình.');
@@ -403,11 +423,19 @@ export const TourDetailScreen: React.FC = () => {
       >
         {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <Image
-            source={{ uri: tour.imageUrls[0] ?? tour.thumbnailUrl }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          {heroImageSource && !hasHeroImageError ? (
+            <Image
+              source={{ uri: heroImageSource }}
+              style={styles.heroImage}
+              resizeMode="cover"
+              onError={() => setHasHeroImageError(true)}
+            />
+          ) : (
+            <View style={[styles.heroImage, styles.heroImageFallback]}>
+              <Ionicons name="image-outline" size={40} color="#0A7A4A" />
+              <Text style={styles.heroImageFallbackText}>Tour này chưa có ảnh</Text>
+            </View>
+          )}
           {/* Subtle overlay */}
           <View style={styles.heroOverlay} />
 
@@ -459,6 +487,32 @@ export const TourDetailScreen: React.FC = () => {
             <Text style={styles.heroElevation}>{tour.elevation}M</Text>
           </View>
         </View>
+
+        {galleryImages.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.thumbnailRow}
+          >
+            {galleryImages.map((imageUrl, index) => {
+              const isSelected = index === selectedImageIndex;
+
+              return (
+                <TouchableOpacity
+                  key={`${imageUrl}-${index}`}
+                  style={[styles.thumbnailButton, isSelected && styles.thumbnailButtonActive]}
+                  onPress={() => {
+                    setHasHeroImageError(false);
+                    setSelectedImageIndex(index);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: imageUrl }} style={styles.thumbnailImage} resizeMode="cover" />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : null}
 
         {/* Stats chips */}
         <View style={styles.statsChips}>
@@ -635,6 +689,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  heroImageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing[2],
+    backgroundColor: 'rgba(255,255,255,0.82)',
+  },
+  heroImageFallbackText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    color: '#0A2518',
+  },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -702,6 +767,27 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+  },
+  thumbnailRow: {
+    gap: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    paddingTop: Spacing[3],
+  },
+  thumbnailButton: {
+    width: 76,
+    height: 76,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: 'rgba(255,255,255,0.78)',
+  },
+  thumbnailButtonActive: {
+    borderColor: '#0A7A4A',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
 
   // ── Stats chips ───────────────────────────────────────────────────────────

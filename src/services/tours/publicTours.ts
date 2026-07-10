@@ -1,4 +1,3 @@
-import { PLACEHOLDER_IMAGES } from '@constants/index';
 import {
   formatTourDistance,
   formatTourDuration,
@@ -108,6 +107,20 @@ export const toPublicTourStringArray = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === 'string' && value.trim()) return [value.trim()];
   return [];
+};
+
+const mergeUniqueStrings = (...groups: string[][]): string[] => {
+  const seen = new Set<string>();
+
+  return groups.flat().filter(value => {
+    const normalizedValue = String(value ?? '').trim();
+    if (!normalizedValue || seen.has(normalizedValue)) {
+      return false;
+    }
+
+    seen.add(normalizedValue);
+    return true;
+  });
 };
 
 const normalizeReviewRating = (value: unknown): number | null => {
@@ -342,12 +355,12 @@ export const mapBackendPublicTour = (
   routeLookup?: Map<number, TourRoute>,
   reviewSummary?: TourRatingSummary,
 ): PublicTourListItem => {
-  const imageUrls = [
-    ...toPublicTourStringArray(tour.imageUrls),
-    ...toPublicTourStringArray(tour.thumbnailUrl),
-    ...toPublicTourStringArray(tour.imageUrl),
-    ...toPublicTourStringArray(tour.coverImageUrl),
-  ];
+  const imageUrls = mergeUniqueStrings(
+    toPublicTourStringArray(tour.coverImageUrl),
+    toPublicTourStringArray(tour.thumbnailUrl),
+    toPublicTourStringArray(tour.imageUrl),
+    toPublicTourStringArray(tour.imageUrls),
+  );
   const destination =
     tour.destination ??
     tour.destinationName ??
@@ -368,8 +381,8 @@ export const mapBackendPublicTour = (
     description: tour.description ?? '',
     destination,
     province: tour.province ?? destination,
-    imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
-    thumbnailUrl: imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR,
+    imageUrls,
+    thumbnailUrl: imageUrls[0] ?? '',
     difficulty: normalizePublicTourDifficulty(tour.difficulty),
     distance: distanceKm ?? Number.NaN,
     duration:

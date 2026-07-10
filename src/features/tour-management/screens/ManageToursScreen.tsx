@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -84,13 +84,14 @@ type ProviderTour = Partial<Tour> & {
   bookingCount?: number;
   updatedAt?: string;
   imageUrl?: string;
+  coverImageUrl?: string;
 };
 
 const mapTourToManagedTour = (tour: ProviderTour): ManagedTour => ({
   id: tour.id ?? tour._id ?? '',
   title: tour.title ?? '',
   destination: tour.destination ?? '',
-  thumbnailUrl: tour.thumbnailUrl ?? tour.imageUrl ?? tour.imageUrls?.[0] ?? '',
+  thumbnailUrl: tour.coverImageUrl ?? tour.thumbnailUrl ?? tour.imageUrl ?? tour.imageUrls?.[0] ?? '',
   status:
     tour.status === 'active' ? 'published' : tour.status === 'archived' ? 'archived' : 'draft',
   price: tour.price ?? tour.pricePerPerson ?? 0,
@@ -121,9 +122,11 @@ export const ManageToursScreen: React.FC = () => {
     }
   }, [setManagedTours]);
 
-  useEffect(() => {
-    loadMyTours();
-  }, [loadMyTours]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadMyTours();
+    }, [loadMyTours]),
+  );
 
   const handleDeleteTour = async (tourId: string) => {
     try {

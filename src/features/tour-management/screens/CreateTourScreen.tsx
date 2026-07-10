@@ -1,101 +1,156 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { RootStackParamList } from '@navigation/types';
+import { ImagePickerField } from '@components/media/ImagePickerField';
+import { invalidatePublicTourCardCache } from '@services/tours/publicTours';
+import { uploadTourImages } from '@services/api/media.api';
+import { toursApi } from '@services/api/tours.api';
+import { pickImagesFromLibrary, removeSelectedImage, reorderSelectedImages } from '@services/media/imagePicker';
+import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
+import { SelectedImage } from '@/types/media';
 import { Colors } from '@theme/colors';
-import { FontFamily, FontSize } from '@theme/typography';
-import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { Shadows } from '@theme/shadows';
-import { toursApi } from '@services/api/tours.api';
-import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
+import { Spacing } from '@theme/spacing';
+import { FontFamily, FontSize } from '@theme/typography';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, 'CreateTour'>;
+type TourDifficulty = 'Easy' | 'Moderate' | 'Hard' | 'Extreme';
+type SaveMode = 'draft' | 'published';
+type SectionKey = 'basic' | 'route' | 'pricing' | 'images' | 'highlights';
 
-const getApiErrorDetails = (error: unknown) => {
+type CreatedTourResponse = {
+  id?: string | number;
+  tourId?: string | number;
+  title?: string;
+};
+
+const getApiErrorMessage = (error: unknown): string => {
   const maybeError = error as {
     message?: string;
     response?: {
-      status?: number;
-      data?: unknown;
-    };
-    config?: {
-      method?: string;
-      url?: string;
-      data?: unknown;
+      data?: {
+        message?: string;
+      };
     };
   };
 
-  return {
-    message: maybeError.message,
-    status: maybeError.response?.status,
-    data: maybeError.response?.data,
-    method: maybeError.config?.method,
-    url: maybeError.config?.url,
-    requestBody: maybeError.config?.data,
-  };
+  return (
+    maybeError.response?.data?.message ??
+    maybeError.message ??
+    'Không thể xử lý yêu cầu. Vui lòng thử lại.'
+  );
 };
 
-interface FormSection {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  isOpen: boolean;
-}
+const extractTourId = (tour: unknown): string | null => {
+  const candidate = tour as CreatedTourResponse | undefined;
+  const rawTourId = candidate?.id ?? candidate?.tourId;
+  if (rawTourId === undefined || rawTourId === null) {
+    return null;
+  }
+
+  const normalizedTourId = String(rawTourId).trim();
+  return normalizedTourId ? normalizedTourId : null;
+};
+
+const DIFFICULTIES: TourDifficulty[] = ['Easy', 'Moderate', 'Hard', 'Extreme'];
+
+const DIFFICULTY_COLORS: Record<TourDifficulty, string> = {
+  Easy: Colors.difficultyEasy,
+  Moderate: Colors.difficultyModerate,
+  Hard: Colors.difficultyHard,
+  Extreme: Colors.difficultyExtreme,
+};
+
+const DIFFICULTY_LABELS: Record<TourDifficulty, string> = {
+  Easy: 'Dễ',
+  Moderate: 'Trung bình',
+  Hard: 'Khó',
+  Extreme: 'Cực khó',
+};
 
 export const CreateTourScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteType>();
   const insets = useSafeAreaInsets();
   const invalidatePublicTourFeed = usePublicTourFeedStore(state => state.invalidate);
-  const isEditing = !!route.params?.tourId;
+  const isEditing = Boolean(route.params?.tourId);
   const selectedRouteId = route.params?.routeId;
   const selectedRouteName = route.params?.routeName;
   const selectedRoutePoints = route.params?.routePoints;
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    console.log('[CreateTourScreen] selectedRouteId:', selectedRouteId);
-  }, [selectedRouteId]);
-
-  // Form state
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
   const [description, setDescription] = useState('');
-  const [difficulty, setDifficulty] = useState<'Easy' | 'Moderate' | 'Hard' | 'Extreme'>('Moderate');
+  const [difficulty, setDifficulty] = useState<TourDifficulty>('Moderate');
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
   const [maxParticipants, setMaxParticipants] = useState('');
   const [price, setPrice] = useState('');
   const [highlights, setHighlights] = useState('');
-
-  // Collapsible sections
-  const [sections, setSections] = useState<Record<string, boolean>>({
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [imagePickerMessage, setImagePickerMessage] = useState<string | null>(null);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
+  const [pendingUploadTourId, setPendingUploadTourId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sections, setSections] = useState<Record<SectionKey, boolean>>({
     basic: true,
     route: true,
-    schedule: false,
-    images: false,
+    pricing: false,
+    images: true,
+    highlights: false,
   });
 
-  const toggleSection = (key: string) => {
-    setSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const submitButtonLabel = useMemo(() => {
+    if (isSubmitting && selectedImages.length > 0) {
+      return 'Đang tải ảnh lên...';
+    }
+
+    if (isSubmitting) {
+      return isEditing ? 'Đang lưu...' : 'Đang đăng...';
+    }
+
+    if (pendingUploadTourId && selectedImages.length > 0) {
+      return 'Thử lại tải ảnh';
+    }
+
+    return 'Đăng tour';
+  }, [isEditing, isSubmitting, pendingUploadTourId, selectedImages.length]);
+
+  const imageHelperText = useMemo(() => {
+    if (uploadProgress !== null) {
+      return `Đang tải ảnh lên... ${Math.round(uploadProgress * 100)}%`;
+    }
+
+    if (imagePickerMessage) {
+      return imagePickerMessage;
+    }
+
+    return 'Tối đa 5 ảnh. Ảnh đầu tiên hoặc ảnh được đánh dấu sẽ là ảnh bìa.';
+  }, [imagePickerMessage, uploadProgress]);
+
+  const toggleSection = (key: SectionKey) => {
+    setSections(previousState => ({
+      ...previousState,
+      [key]: !previousState[key],
+    }));
   };
 
   const openRouteMap = () => {
-    console.log('[CreateTourScreen] create route button pressed');
     navigation.navigate('CreateRouteMap', {
       tourId: route.params?.tourId,
       routeId: selectedRouteId,
@@ -105,69 +160,167 @@ export const CreateTourScreen: React.FC = () => {
     });
   };
 
-  const handleSave = async (status: 'draft' | 'published') => {
+  const validateForm = (): boolean => {
     if (!title.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên tour');
-      return;
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên tour.');
+      return false;
     }
+
     if (!destination.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập điểm đến');
-      return;
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập điểm đến.');
+      return false;
     }
+
     if (!selectedRouteId) {
       Alert.alert('Thiếu thông tin', 'Vui lòng tạo lộ trình trước khi đăng tour.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handlePickImages = async () => {
+    if (isSubmitting) {
       return;
     }
-    setIsLoading(true);
+
+    const result = await pickImagesFromLibrary(selectedImages);
+
+    if (result.status === 'success') {
+      setSelectedImages(result.images);
+      setImagePickerMessage(result.message ?? null);
+      setUploadErrorMessage(null);
+      return;
+    }
+
+    if (result.status === 'permission-denied' || result.status === 'validation-error') {
+      setImagePickerMessage(result.message ?? null);
+      return;
+    }
+
+    setImagePickerMessage(null);
+  };
+
+  const handleRemoveImage = (imageId: string) => {
+    setSelectedImages(previousImages => removeSelectedImage(previousImages, imageId));
+  };
+
+  const handleSetCoverImage = (imageId: string) => {
+    setSelectedImages(previousImages => reorderSelectedImages(previousImages, imageId));
+  };
+
+  const buildPayload = () => ({
+    routeId: selectedRouteId as number,
+    title: title.trim(),
+    description: description.trim(),
+    price: Number(price) || 0,
+    maxParticipants: Number(maxParticipants) || 0,
+    difficulty,
+    duration: Number(duration) || 0,
+    meetingPoint: destination.trim(),
+    startDate: '',
+    endDate: '',
+  });
+
+  const finalizeSuccess = (mode: SaveMode, imagesUploaded: boolean) => {
+    invalidatePublicTourCardCache();
+    invalidatePublicTourFeed();
+    setPendingUploadTourId(null);
+    setUploadErrorMessage(null);
+    setUploadProgress(null);
+
+    const successMessage =
+      mode === 'draft'
+        ? 'Tour đã được lưu thành công.'
+        : imagesUploaded
+          ? 'Tạo tour và tải ảnh lên thành công.'
+          : 'Tạo tour thành công.';
+
+    Alert.alert('Thành công', successMessage, [
+      {
+        text: 'OK',
+        onPress: () => navigation.navigate('ManageTours'),
+      },
+    ]);
+  };
+
+  const performImageUpload = async (tourId: string, mode: SaveMode) => {
+    if (selectedImages.length === 0) {
+      finalizeSuccess(mode, false);
+      return;
+    }
+
+    await uploadTourImages(tourId, selectedImages, {
+      onProgress: progress => setUploadProgress(progress),
+    });
+
+    finalizeSuccess(mode, true);
+  };
+
+  const handleSave = async (mode: SaveMode) => {
+    if (!validateForm() || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setUploadErrorMessage(null);
+    setImagePickerMessage(null);
+
     try {
-      const payload = {
-        routeId: selectedRouteId,
-        title: title.trim(),
-        description: description.trim(),
-        price: Number(price) || 0,
-        maxParticipants: Number(maxParticipants) || 0,
-        difficulty,
-        duration: Number(duration) || 0,
-        meetingPoint: destination.trim(),
-        startDate: '',
-        endDate: '',
-      };
-      console.log('[CreateTourScreen] final tour payload before POST /tours/me:', payload);
-      if (isEditing && route.params?.tourId) {
-        await toursApi.updateMyTour(route.params.tourId, payload);
-      } else {
-        await toursApi.createMyTour(payload);
+      if (pendingUploadTourId && selectedImages.length > 0) {
+        await performImageUpload(pendingUploadTourId, mode);
+        return;
       }
-      invalidatePublicTourFeed();
-      navigation.navigate('ManageTours');
+
+      const payload = buildPayload();
+      const savedTour = isEditing && route.params?.tourId
+        ? await toursApi.updateMyTour(route.params.tourId, payload)
+        : await toursApi.createMyTour(payload);
+
+      const resolvedTourId = extractTourId(savedTour);
+      const fallbackTourId = route.params?.tourId;
+      const targetTourId = resolvedTourId ?? fallbackTourId ?? null;
+
+      if (!targetTourId && selectedImages.length > 0) {
+        throw new Error('Không xác định được tourId để tải ảnh lên.');
+      }
+
+      if (!targetTourId) {
+        finalizeSuccess(mode, false);
+        return;
+      }
+
+      try {
+        await performImageUpload(targetTourId, mode);
+      } catch (uploadError) {
+        setPendingUploadTourId(targetTourId);
+        setUploadProgress(null);
+        setUploadErrorMessage(getApiErrorMessage(uploadError));
+        invalidatePublicTourCardCache();
+        invalidatePublicTourFeed();
+
+        Alert.alert(
+          'Tải ảnh lên thất bại',
+          'Tour đã được tạo nhưng tải ảnh lên thất bại. Bạn có thể thử lại ngay trên màn hình này mà không tạo tour lần thứ hai.',
+        );
+      }
     } catch (error) {
-      const errorDetails = getApiErrorDetails(error);
-      console.log('[CreateTourScreen] createMyTour failed full error response:', errorDetails);
-      Alert.alert(
-        'Error',
-        `Could not save tour.\n\nStatus: ${
-          errorDetails.status ?? 'unknown'
-        }\nResponse: ${JSON.stringify(errorDetails.data ?? errorDetails.message ?? 'unknown')}`,
-      );
+      Alert.alert('Không thể lưu tour', getApiErrorMessage(error));
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
-  const DIFFICULTIES = ['Easy', 'Moderate', 'Hard', 'Extreme'] as const;
-  const DIFFICULTY_COLORS = {
-    Easy: Colors.difficultyEasy,
-    Moderate: Colors.difficultyModerate,
-    Hard: Colors.difficultyHard,
-    Extreme: Colors.difficultyExtreme,
-  };
-  const DIFFICULTY_LABELS = {
-    Easy: 'Dễ', Moderate: 'Trung bình', Hard: 'Khó', Extreme: 'Cực khó',
-  };
-
-  console.log('[CreateTourScreen] route map button rendered');
-
-  const SectionHeader = ({ label, icon, sectionKey }: { label: string; icon: keyof typeof Ionicons.glyphMap; sectionKey: string }) => (
+  const SectionHeader = ({
+    label,
+    icon,
+    sectionKey,
+  }: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    sectionKey: SectionKey;
+  }) => (
     <TouchableOpacity
       style={styles.sectionHeader}
       onPress={() => toggleSection(sectionKey)}
@@ -189,29 +342,20 @@ export const CreateTourScreen: React.FC = () => {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color={Colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditing ? 'Chỉnh sửa Tour' : 'Tạo Tour mới'}
-        </Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>{isEditing ? 'Chỉnh sửa tour' : 'Tạo tour mới'}</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* ── Form ── */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
-        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* ── Basic Info ── */}
         <View style={styles.section}>
           <SectionHeader label="Thông tin cơ bản" icon="information-circle-outline" sectionKey="basic" />
           {sections.basic && (
@@ -255,23 +399,29 @@ export const CreateTourScreen: React.FC = () => {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>Độ khó</Text>
                 <View style={styles.difficultyRow}>
-                  {DIFFICULTIES.map(d => (
+                  {DIFFICULTIES.map(item => (
                     <TouchableOpacity
-                      key={d}
+                      key={item}
                       style={[
                         styles.difficultyChip,
-                        difficulty === d && { backgroundColor: DIFFICULTY_COLORS[d] + '20', borderColor: DIFFICULTY_COLORS[d] },
+                        difficulty === item && {
+                          backgroundColor: `${DIFFICULTY_COLORS[item]}20`,
+                          borderColor: DIFFICULTY_COLORS[item],
+                        },
                       ]}
-                      onPress={() => setDifficulty(d)}
+                      onPress={() => setDifficulty(item)}
                       activeOpacity={0.7}
                     >
                       <Text
                         style={[
                           styles.difficultyChipText,
-                          difficulty === d && { color: DIFFICULTY_COLORS[d], fontFamily: FontFamily.bold },
+                          difficulty === item && {
+                            color: DIFFICULTY_COLORS[item],
+                            fontFamily: FontFamily.bold,
+                          },
                         ]}
                       >
-                        {DIFFICULTY_LABELS[d]}
+                        {DIFFICULTY_LABELS[item]}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -281,7 +431,6 @@ export const CreateTourScreen: React.FC = () => {
           )}
         </View>
 
-        {/* ── Route Info ── */}
         <View style={styles.section}>
           <SectionHeader label="Thông tin lộ trình" icon="map-outline" sectionKey="route" />
           {sections.route && (
@@ -294,24 +443,18 @@ export const CreateTourScreen: React.FC = () => {
                   <View style={styles.selectedRouteTextCol}>
                     <Text style={styles.fieldLabel}>Lộ trình</Text>
                     <Text style={styles.routeValue}>
-                      {selectedRouteId
-                        ? `Đã chọn lộ trình: #${selectedRouteId}`
-                        : 'Chưa chọn lộ trình'}
+                      {selectedRouteId ? `Đã chọn lộ trình: #${selectedRouteId}` : 'Chưa chọn lộ trình'}
                     </Text>
-                    {selectedRouteName ? (
-                      <Text style={styles.routeNameText}>{selectedRouteName}</Text>
-                    ) : null}
+                    {selectedRouteName ? <Text style={styles.routeNameText}>{selectedRouteName}</Text> : null}
                   </View>
                 </View>
+
                 <View style={styles.routeActionRow}>
-                  <TouchableOpacity
-                    style={styles.routeActionBtn}
-                    onPress={openRouteMap}
-                    activeOpacity={0.8}
-                  >
+                  <TouchableOpacity style={styles.routeActionBtn} onPress={openRouteMap} activeOpacity={0.8}>
                     <Ionicons name="add-circle-outline" size={18} color={Colors.onPrimary} />
                     <Text style={styles.routeActionBtnText}>Tạo lộ trình trên bản đồ</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     style={[
                       styles.routeActionBtn,
@@ -341,7 +484,7 @@ export const CreateTourScreen: React.FC = () => {
               </View>
 
               <View style={styles.rowFields}>
-                <View style={[styles.field, { flex: 1 }]}>
+                <View style={[styles.field, styles.flexField]}>
                   <Text style={styles.fieldLabel}>Khoảng cách (km)</Text>
                   <TextInput
                     style={styles.input}
@@ -352,7 +495,7 @@ export const CreateTourScreen: React.FC = () => {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={[styles.field, { flex: 1 }]}>
+                <View style={[styles.field, styles.flexField]}>
                   <Text style={styles.fieldLabel}>Thời gian (giờ)</Text>
                   <TextInput
                     style={styles.input}
@@ -376,26 +519,13 @@ export const CreateTourScreen: React.FC = () => {
                   keyboardType="number-pad"
                 />
               </View>
-              <TouchableOpacity
-                style={styles.mapRouteBtn}
-                onPress={openRouteMap}
-                activeOpacity={0.85}
-                testID="create-route-map-button"
-                accessibilityLabel="Tạo lộ trình trên bản đồ"
-              >
-                <Ionicons name="map-outline" size={20} color={Colors.onPrimary} />
-                <Text style={styles.mapRouteBtnText}>
-                  {'T\u1ea1o l\u1ed9 tr\u00ecnh tr\u00ean b\u1ea3n \u0111\u1ed3'}
-                </Text>
-              </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* ── Pricing ── */}
         <View style={styles.section}>
-          <SectionHeader label="Giá & Ưu đãi" icon="pricetag-outline" sectionKey="schedule" />
-          {sections.schedule && (
+          <SectionHeader label="Giá & ưu đãi" icon="pricetag-outline" sectionKey="pricing" />
+          {sections.pricing && (
             <View style={styles.sectionContent}>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>Giá/người (VNĐ)</Text>
@@ -408,9 +538,10 @@ export const CreateTourScreen: React.FC = () => {
                   keyboardType="number-pad"
                 />
               </View>
+
               <TouchableOpacity
                 style={styles.pricingPolicyBtn}
-                onPress={() => Alert.alert('Thông báo', 'Lưu tour trước để cài đặt chính sách giá')}
+                onPress={() => Alert.alert('Thông báo', 'Lưu tour trước để cài đặt chính sách giá chi tiết.')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="options-outline" size={16} color={Colors.primary} />
@@ -421,16 +552,45 @@ export const CreateTourScreen: React.FC = () => {
           )}
         </View>
 
-        {/* ── Highlights ── */}
         <View style={styles.section}>
-          <SectionHeader label="Điểm nổi bật" icon="star-outline" sectionKey="images" />
+          <SectionHeader label="Hình ảnh tour" icon="images-outline" sectionKey="images" />
           {sections.images && (
+            <View style={styles.sectionContent}>
+              <ImagePickerField
+                images={selectedImages}
+                disabled={isSubmitting}
+                isUploading={isSubmitting && selectedImages.length > 0 && uploadProgress !== null}
+                helperText={imageHelperText}
+                errorText={uploadErrorMessage}
+                onPickImages={handlePickImages}
+                onRemoveImage={handleRemoveImage}
+                onSetCoverImage={handleSetCoverImage}
+              />
+
+              {pendingUploadTourId && uploadErrorMessage ? (
+                <View style={styles.warningBox}>
+                  <Ionicons name="alert-circle-outline" size={18} color={Colors.error} />
+                  <View style={styles.warningTextWrapper}>
+                    <Text style={styles.warningTitle}>Tour đã được tạo nhưng tải ảnh lên thất bại</Text>
+                    <Text style={styles.warningText}>
+                      Nhấn nút đăng tour để thử lại tải ảnh với tour hiện có. App sẽ không tạo tour lần thứ hai.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader label="Điểm nổi bật" icon="star-outline" sectionKey="highlights" />
+          {sections.highlights && (
             <View style={styles.sectionContent}>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>Điểm nổi bật (mỗi dòng 1 điểm)</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  placeholder={"VD:\nNgắm bình minh từ đỉnh núi\nTrải nghiệm văn hóa bản địa\n..."}
+                  placeholder={'VD:\nNgắm bình minh từ đỉnh núi\nTrải nghiệm văn hóa bản địa\n...'}
                   placeholderTextColor={Colors.onSurfaceVariant}
                   value={highlights}
                   onChangeText={setHighlights}
@@ -444,28 +604,29 @@ export const CreateTourScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* ── Bottom Actions ── */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
-          style={[styles.draftBtn, (!selectedRouteId || isLoading) && styles.actionDisabled]}
+          style={[styles.draftBtn, (!selectedRouteId || isSubmitting || Boolean(pendingUploadTourId)) && styles.actionDisabled]}
           onPress={() => handleSave('draft')}
           activeOpacity={0.8}
-          disabled={isLoading || !selectedRouteId}
+          disabled={isSubmitting || !selectedRouteId || Boolean(pendingUploadTourId)}
         >
           <Ionicons name="save-outline" size={18} color={Colors.primary} />
-          <Text style={styles.draftBtnText}>Lưu nháp</Text>
+          <Text style={styles.draftBtnText}>Lưu</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.publishBtn, (isLoading || !selectedRouteId) && styles.publishBtnDisabled]}
+          style={[styles.publishBtn, (isSubmitting || !selectedRouteId) && styles.publishBtnDisabled]}
           onPress={() => handleSave('published')}
           activeOpacity={0.85}
-          disabled={isLoading || !selectedRouteId}
+          disabled={isSubmitting || !selectedRouteId}
         >
-          <Ionicons name="cloud-upload-outline" size={18} color={Colors.onPrimary} />
-          <Text style={styles.publishBtnText}>
-            {isLoading ? 'Đang đăng...' : 'Đăng tour'}
-          </Text>
+          <Ionicons
+            name={pendingUploadTourId ? 'refresh-outline' : 'cloud-upload-outline'}
+            size={18}
+            color={Colors.onPrimary}
+          />
+          <Text style={styles.publishBtnText}>{submitButtonLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -473,7 +634,10 @@ export const CreateTourScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+  root: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -485,16 +649,27 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.outlineVariant,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.onSurface,
   },
-  scroll: { flex: 1 },
-  scrollContent: { padding: Spacing[5], gap: Spacing[4] },
+  headerSpacer: {
+    width: 40,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing[5],
+    gap: Spacing[4],
+  },
   section: {
     backgroundColor: Colors.surfaceWhite,
     borderRadius: Radius.xl,
@@ -509,25 +684,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineVariant,
   },
-  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+  },
   sectionIcon: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.primaryFixed,
-    alignItems: 'center', justifyContent: 'center',
   },
   sectionTitle: {
     fontFamily: FontFamily.semiBold,
     fontSize: FontSize.base,
     color: Colors.onSurface,
   },
-  sectionContent: { padding: Spacing[4], gap: Spacing[4] },
-  field: { gap: Spacing[1] },
+  sectionContent: {
+    padding: Spacing[4],
+    gap: Spacing[4],
+  },
+  field: {
+    gap: Spacing[1],
+  },
+  flexField: {
+    flex: 1,
+  },
   fieldLabel: {
     fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     color: Colors.onSurface,
   },
   input: {
+    minHeight: 50,
     borderWidth: 1.5,
     borderColor: Colors.outlineVariant,
     borderRadius: Radius.lg,
@@ -537,10 +728,33 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.onSurface,
     backgroundColor: Colors.surfaceContainerLowest,
-    minHeight: 50,
   },
-  textArea: { minHeight: 100, paddingTop: Spacing[3] },
-  rowFields: { flexDirection: 'row', gap: Spacing[3] },
+  textArea: {
+    minHeight: 100,
+    paddingTop: Spacing[3],
+  },
+  difficultyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[2],
+  },
+  difficultyChip: {
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.chip,
+    borderWidth: 1.5,
+    borderColor: Colors.outlineVariant,
+    backgroundColor: Colors.surfaceContainer,
+  },
+  difficultyChipText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.onSurfaceVariant,
+  },
+  rowFields: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+  },
   selectedRouteBox: {
     gap: Spacing[3],
     borderWidth: 1.5,
@@ -587,6 +801,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: Radius.button,
     paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[3],
   },
   routeActionBtnSecondary: {
     backgroundColor: Colors.surfaceWhite,
@@ -608,50 +823,45 @@ const styles = StyleSheet.create({
   routeActionBtnTextDisabled: {
     color: Colors.onSurfaceVariant,
   },
-  mapRouteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing[2],
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
-    paddingHorizontal: Spacing[4],
-  },
-  mapRouteBtnText: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
-    color: Colors.onPrimary,
-  },
-  difficultyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2] },
-  difficultyChip: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: Radius.chip,
-    borderWidth: 1.5,
-    borderColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainer,
-  },
-  difficultyChipText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    color: Colors.onSurfaceVariant,
-  },
   pricingPolicyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[2],
     padding: Spacing[3],
-    backgroundColor: Colors.primaryFixed + '20',
+    backgroundColor: `${Colors.primaryFixed}20`,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    borderColor: `${Colors.primary}40`,
   },
   pricingPolicyBtnText: {
     flex: 1,
     fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     color: Colors.primary,
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing[3],
+    padding: Spacing[3],
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: `${Colors.error}30`,
+    backgroundColor: Colors.errorContainer,
+  },
+  warningTextWrapper: {
+    flex: 1,
+    gap: 2,
+  },
+  warningTitle: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    color: Colors.onErrorContainer,
+  },
+  warningText: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.onErrorContainer,
   },
   footer: {
     flexDirection: 'row',
@@ -691,7 +901,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: Radius.button,
   },
-  publishBtnDisabled: { opacity: 0.7 },
+  publishBtnDisabled: {
+    opacity: 0.7,
+  },
   publishBtnText: {
     fontFamily: FontFamily.bold,
     fontSize: FontSize.base,

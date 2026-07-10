@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ViewStyle } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@theme/colors';
@@ -26,8 +26,11 @@ export const HomeTourCard: React.FC<HomeTourCardProps> = ({
 }) => {
   const { tour, card } = item;
   const difficulty = DIFFICULTY_CONFIG[tour.difficulty as TourDifficulty];
+  const [hasImageError, setHasImageError] = useState(false);
   const thumbnailSource =
-    typeof card.imageUrl === 'string' && card.imageUrl.trim() ? { uri: card.imageUrl } : undefined;
+    !hasImageError && typeof card.imageUrl === 'string' && card.imageUrl.trim()
+      ? { uri: card.imageUrl }
+      : undefined;
 
   return (
     <TouchableOpacity
@@ -37,7 +40,12 @@ export const HomeTourCard: React.FC<HomeTourCardProps> = ({
     >
       <View style={[styles.imageContainer, compact && styles.imageContainerCompact]}>
         {thumbnailSource ? (
-          <Image source={thumbnailSource} style={styles.image} resizeMode="cover" />
+          <Image
+            source={thumbnailSource}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setHasImageError(true)}
+          />
         ) : (
           <View style={[styles.image, styles.imageFallback]}>
             <Ionicons name="image-outline" size={28} color={Colors.onSurfaceVariant} />
