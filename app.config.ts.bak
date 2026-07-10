@@ -1,0 +1,10 @@
+const baseConfig = require('./app.json').expo;
+
+export default () => ({
+  ...baseConfig,
+  extra: {
+    ...(baseConfig.extra ?? {}),
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL?.trim() ?? '',
+    mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN?.trim() ?? '',
+  },
+});

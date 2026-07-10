@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "Chektrek",
+    "slug": "chektrek",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0061a5"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.chektrek.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Chektrek needs your location to track your trek and show nearby destinations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Chektrek needs your location in the background for trip tracking.",
+        "NSCameraUsageDescription": "Chektrek needs camera access to upload photos for your trek posts.",
+        "NSPhotoLibraryUsageDescription": "Chektrek needs photo library access to share your trek memories."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0061a5"
+      },
+      "package": "com.chektrek",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Chektrek to use your location for trek tracking."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#0061a5"
+        }
+      ],
+      "expo-font"
+    ],
+    "scheme": "chektrek",
+    "extra": {
+  "apiBaseUrl": "https://trekking-app-production-9c47.up.railway.app/api/v1",
+  "eas": {
+    "projectId": "0e68d4f3-89ec-461c-9afd-b90bfdd5baed"
+  },
+    "experiments": {
+      "typedRoutes": true
+    }
+    
+  }
+  
+}
+}
