@@ -37,10 +37,10 @@ type DiscoverNavProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 
 const FILTER_CATEGORIES = [
-  { id: '', label: 'Tat ca' },
-  { id: 'Easy', label: 'De' },
-  { id: 'Moderate', label: 'Trung binh' },
-  { id: 'Hard', label: 'Kho' },
+  { id: '', label: 'Tất cả' },
+  { id: 'Easy', label: 'Dễ' },
+  { id: 'Moderate', label: 'Trung bình' },
+  { id: 'Hard', label: 'Khó' },
 ];
 
 const formatDurationLabel = (value: unknown): string => {
@@ -49,18 +49,18 @@ const formatDurationLabel = (value: unknown): string => {
     if (!trimmedValue) return '--';
 
     const numericDuration = Number(trimmedValue);
-    if (Number.isFinite(numericDuration)) return `${numericDuration} gio`;
+    if (Number.isFinite(numericDuration)) return `${numericDuration} giờ`;
     return trimmedValue;
   }
 
   const numericDuration = toPublicTourNumber(value, 0);
-  return numericDuration > 0 ? `${numericDuration} gio` : '--';
+  return numericDuration > 0 ? `${numericDuration} giờ` : '--';
 };
 
 const getDifficultyLabel = (difficulty: Tour['difficulty']): string => {
-  if (difficulty === 'Easy') return 'De';
-  if (difficulty === 'Moderate') return 'Trung binh';
-  return 'Kho';
+  if (difficulty === 'Easy') return 'Dễ';
+  if (difficulty === 'Moderate') return 'Trung bình';
+  return 'Khó';
 };
 
 const DiscoverTourCard: React.FC<{
