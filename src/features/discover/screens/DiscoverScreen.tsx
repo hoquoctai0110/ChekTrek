@@ -212,7 +212,7 @@ const DiscoverTourCard: React.FC<{
             <Text style={styles.statText}>{Number(ratingValue ?? 0).toFixed(1)}</Text>
           </View>
 
-          <Text style={styles.dot}>â€¢</Text>
+          <Text style={styles.dot}>•</Text>
 
           <View style={styles.statItem}>
             <View style={styles.difficultyDot} />
@@ -225,11 +225,11 @@ const DiscoverTourCard: React.FC<{
             </Text>
           </View>
 
-          <Text style={styles.dot}>â€¢</Text>
+          <Text style={styles.dot}>•</Text>
 
           <Text style={styles.statText}>{tour.distanceLabel}</Text>
 
-          <Text style={styles.dot}>â€¢</Text>
+          <Text style={styles.dot}>•</Text>
 
           <Text style={styles.statText}>{tour.durationLabel}</Text>
         </View>
