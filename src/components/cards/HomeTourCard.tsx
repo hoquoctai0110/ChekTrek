@@ -18,11 +18,6 @@ interface HomeTourCardProps {
   compact?: boolean;
 }
 
-const formatPrice = (value: number): string => {
-  if (!Number.isFinite(value) || value <= 0) return 'Liên hệ';
-  return `${new Intl.NumberFormat('vi-VN').format(value)}đ`;
-};
-
 export const HomeTourCard: React.FC<HomeTourCardProps> = ({
   item,
   onPress,
@@ -79,20 +74,15 @@ export const HomeTourCard: React.FC<HomeTourCardProps> = ({
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.footerLeft}>
-            <View
-              style={[
-                styles.difficultyBadge,
-                { backgroundColor: difficulty?.bgColor ?? '#f0f0f0' },
-              ]}
-            >
-              <Text
-                style={[styles.difficultyText, { color: difficulty?.color ?? Colors.secondary }]}
-              >
-                {difficulty?.label ?? tour.difficulty}
-              </Text>
-            </View>
-            <Text style={styles.priceText}>{formatPrice(tour.pricePerPerson)}</Text>
+          <View
+            style={[
+              styles.difficultyBadge,
+              { backgroundColor: difficulty?.bgColor ?? '#f0f0f0' },
+            ]}
+          >
+            <Text style={[styles.difficultyText, { color: difficulty?.color ?? Colors.secondary }]}>
+              {difficulty?.label ?? tour.difficulty}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.arrowButton}
@@ -203,12 +193,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: Spacing[1],
   },
-  footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-    flex: 1,
-  },
   difficultyBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -219,12 +203,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  priceText: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    flexShrink: 1,
   },
   arrowButton: {
     width: 32,

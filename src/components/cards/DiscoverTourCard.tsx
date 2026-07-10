@@ -12,11 +12,6 @@ interface DiscoverTourCardProps {
   onPress: (item: PublicTourListItem) => void;
 }
 
-const formatPrice = (value: number): string => {
-  if (!Number.isFinite(value) || value <= 0) return 'Liên hệ';
-  return `${new Intl.NumberFormat('vi-VN').format(value)}đ`;
-};
-
 const extractShortRating = (ratingText: string): string => {
   if (ratingText === TOUR_DISPLAY_TEXT.noRating) return ratingText;
   const [value] = ratingText.split(' ');
@@ -32,7 +27,7 @@ const getDifficultyLabel = (difficulty: PublicTourListItem['tour']['difficulty']
 
 export const DiscoverTourCard: React.FC<DiscoverTourCardProps> = ({ item, onPress }) => {
   const [isLiked, setIsLiked] = useState(false);
-  const { tour, card, ratingSummary } = item;
+  const { tour, card } = item;
   const ratingValue = useMemo(() => extractShortRating(card.ratingText), [card.ratingText]);
 
   return (
@@ -76,11 +71,6 @@ export const DiscoverTourCard: React.FC<DiscoverTourCardProps> = ({ item, onPres
           <Text style={styles.statText}>{card.durationText}</Text>
         </View>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.reviewText}>{card.ratingText}</Text>
-          <Text style={styles.priceText}>{formatPrice(tour.pricePerPerson)}</Text>
-        </View>
-
         <TouchableOpacity
           style={styles.detailBtn}
           onPress={() => onPress(item)}
@@ -88,14 +78,6 @@ export const DiscoverTourCard: React.FC<DiscoverTourCardProps> = ({ item, onPres
           accessibilityLabel={TOUR_DISPLAY_TEXT.viewDetails}
         >
           <Text style={styles.detailBtnText}>{TOUR_DISPLAY_TEXT.viewDetails}</Text>
-          {ratingSummary.reviewCount > 0 ? (
-            <Text style={styles.detailBtnMeta}>
-              {ratingSummary.reviewCount}{' '}
-              {ratingSummary.reviewCount === 1
-                ? TOUR_DISPLAY_TEXT.singleReview
-                : TOUR_DISPLAY_TEXT.multipleReviewsLabel}
-            </Text>
-          ) : null}
         </TouchableOpacity>
       </View>
     </View>
@@ -181,23 +163,6 @@ const styles = StyleSheet.create({
     color: 'rgba(10, 37, 24, 0.4)',
     fontSize: FontSize.xs,
   },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing[2],
-  },
-  reviewText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
-    color: 'rgba(10, 37, 24, 0.7)',
-    flex: 1,
-  },
-  priceText: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
-    color: '#0A7A4A',
-  },
   detailBtn: {
     backgroundColor: '#00F582',
     borderRadius: Radius.button,
@@ -216,11 +181,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.base,
     color: '#0A2518',
-  },
-  detailBtnMeta: {
-    marginTop: 2,
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
-    color: 'rgba(10, 37, 24, 0.7)',
   },
 });
