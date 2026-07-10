@@ -118,7 +118,7 @@ const DiscoverTourCard: React.FC<{
           onPress={() => onPress(tour)}
           activeOpacity={0.8}
         >
-          <Text style={styles.detailBtnText}>Chi tiet</Text>
+          <Text style={styles.detailBtnText}>Chi tiết</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -197,7 +197,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Kham pha</Text>
+        <Text style={styles.headerTitle}>Khám phá</Text>
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => navigation.navigate('Notifications')}
@@ -208,7 +208,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.searchWrapper}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Tim kiem tuyen duong" />
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm kiếm tuyến đường" />
       </View>
 
       <View style={styles.filtersWrapper}>
@@ -240,11 +240,11 @@ export const DiscoverScreen: React.FC = () => {
         <View style={styles.quickCardsRow}>
           <View style={styles.quickCard}>
             <MaterialCommunityIcons name="crown-outline" size={26} color="#0A2518" />
-            <Text style={styles.quickCardText}>Tong tour: {tours.length}</Text>
+            <Text style={styles.quickCardText}>Tổng tour: {tours.length}</Text>
           </View>
           <View style={styles.quickCard}>
             <Ionicons name="map-outline" size={24} color="#0A2518" />
-            <Text style={styles.quickCardText}>Ket qua: {filteredTours.length}</Text>
+            <Text style={styles.quickCardText}>Kết quả: {filteredTours.length}</Text>
           </View>
         </View>
 
@@ -261,8 +261,8 @@ export const DiscoverScreen: React.FC = () => {
             ))
           ) : (
             <EmptyState
-              title="Chua co du lieu tour"
-              message="Hien chua co tour phu hop de hien thi."
+              title="Chưa có dữ liệu tour"
+              message="Hiện chưa có tour phù hợp để hiển thị."
             />
           )}
         </View>
