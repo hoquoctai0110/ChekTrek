@@ -18,14 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeScreen } from '@components/common/SafeScreen';
 import { SearchBar } from '@components/common/SearchBar';
 import { EmptyState } from '@components/common/EmptyState';
-import { TourCard } from '@components/cards/TourCard';
+import { HomeTourCard } from '@components/cards/HomeTourCard';
 import { Colors } from '@theme/colors';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { Shadows } from '@theme/shadows';
 import { RootStackParamList } from '@navigation/types';
-import { Tour } from '../../../types';
 import { useAuthStore } from '@store/authStore';
 import { ProviderSosAlert, sosApi } from '@services/api/sos.api';
 import { loadPublicTourCardModels, PublicTourListItem } from '@services/tours/publicTours';
@@ -262,8 +261,8 @@ export const HomeScreen: React.FC = () => {
     ]).finally(() => setRefreshing(false));
   }, [fetchProviderSos, fetchTours, role]);
 
-  const handleTourPress = (tour: Tour) => {
-    navigation.navigate('TourDetail', { tourId: tour.id });
+  const handleTourPress = (item: PublicTourListItem) => {
+    navigation.navigate('TourDetail', { tourId: item.tour.id });
   };
 
   return (
@@ -488,12 +487,7 @@ export const HomeScreen: React.FC = () => {
               data={filteredTours}
               keyExtractor={item => item.tour.id}
               renderItem={({ item }) => (
-                <TourCard
-                  tour={item.tour}
-                  display={item.card}
-                  onPress={handleTourPress}
-                  style={styles.tourCard}
-                />
+                <HomeTourCard item={item} onPress={handleTourPress} style={styles.tourCard} />
               )}
               horizontal
               showsHorizontalScrollIndicator={false}

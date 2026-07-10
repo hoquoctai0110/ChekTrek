@@ -16,7 +16,7 @@ import { SearchBar } from '@components/common/SearchBar';
 import { CategoryChip } from '@components/common/CategoryChip';
 import { EmptyState } from '@components/common/EmptyState';
 import { LoadingSpinner } from '@components/common/LoadingSpinner';
-import { TourCard } from '@components/cards/TourCard';
+import { DiscoverTourCard } from '@components/cards/DiscoverTourCard';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { FontFamily, FontSize } from '@theme/typography';
@@ -87,8 +87,8 @@ export const DiscoverScreen: React.FC = () => {
     });
   }, [search, selectedFilter, tours]);
 
-  const handleTourPress = (tour: PublicTourListItem['tour']) => {
-    navigation.navigate('TourDetail', { tourId: tour.id });
+  const handleTourPress = (item: PublicTourListItem) => {
+    navigation.navigate('TourDetail', { tourId: item.tour.id });
   };
 
   const handleRefresh = useCallback(() => {
@@ -171,13 +171,7 @@ export const DiscoverScreen: React.FC = () => {
             <LoadingSpinner />
           ) : filteredTours.length > 0 ? (
             filteredTours.map(item => (
-              <TourCard
-                key={item.tour.id}
-                tour={item.tour}
-                display={item.card}
-                onPress={handleTourPress}
-                style={styles.tourCard}
-              />
+              <DiscoverTourCard key={item.tour.id} item={item} onPress={handleTourPress} />
             ))
           ) : (
             <EmptyState
