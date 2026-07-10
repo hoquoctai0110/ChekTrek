@@ -20,6 +20,7 @@ import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { Shadows } from '@theme/shadows';
 import { toursApi } from '@services/api/tours.api';
+import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, 'CreateTour'>;
@@ -58,6 +59,7 @@ export const CreateTourScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteType>();
   const insets = useSafeAreaInsets();
+  const invalidatePublicTourFeed = usePublicTourFeedStore(state => state.invalidate);
   const isEditing = !!route.params?.tourId;
   const selectedRouteId = route.params?.routeId;
   const selectedRouteName = route.params?.routeName;
@@ -136,6 +138,7 @@ export const CreateTourScreen: React.FC = () => {
       } else {
         await toursApi.createMyTour(payload);
       }
+      invalidatePublicTourFeed();
       navigation.navigate('ManageTours');
     } catch (error) {
       const errorDetails = getApiErrorDetails(error);

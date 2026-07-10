@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   StyleSheet,
   Dimensions,
   Image,
+  RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeScreen } from '@components/common/SafeScreen';
@@ -19,82 +20,28 @@ import { EmptyState } from '@components/common/EmptyState';
 import { LoadingSpinner } from '@components/common/LoadingSpinner';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { PLACEHOLDER_IMAGES } from '@constants/index';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
-import { Tour, TourDifficulty, TourStatus } from '@/types';
+import { Tour } from '@/types';
 import { RootStackParamList } from '@navigation/types';
 import { toursApi } from '@services/api/tours.api';
+import {
+  getPublicTourStableId,
+  mapBackendPublicTours,
+  toPublicTourNumber,
+} from '@services/tours/publicTours';
+import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
 
 type DiscoverNavProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 
 const FILTER_CATEGORIES = [
-  { id: 'Easy', label: 'Dễ' },
-  { id: 'Moderate', label: 'Trung Bình' },
-  { id: 'Hard', label: 'Khó' },
+  { id: '', label: 'Tat ca' },
+  { id: 'Easy', label: 'De' },
+  { id: 'Moderate', label: 'Trung binh' },
+  { id: 'Hard', label: 'Kho' },
 ];
-
-type BackendDiscoverTour = Partial<Tour> & {
-  tourId?: string | number;
-  name?: string;
-  tourName?: string;
-  destinationName?: string;
-  location?: string;
-  meetingPoint?: string;
-  imageUrl?: string;
-  coverImageUrl?: string;
-  price?: number | string | null;
-  distanceKm?: number | string | null;
-  estimatedDurationMin?: number | string | null;
-  averageRating?: number | string | null;
-  ratingAverage?: number | string | null;
-  reviewsCount?: number | string | null;
-  bookingsCount?: number | string | null;
-  route?: {
-    distanceKm?: number | string | null;
-    elevationGain?: number | string | null;
-  };
-  providerId?: string | number;
-  providerName?: string;
-  guide?: {
-    id?: string | number;
-    name?: string;
-    avatarUrl?: string;
-  };
-};
-
-type DiscoverTour = Tour & {
-  distanceLabel: string;
-  durationLabel: string;
-};
-
-const toNumber = (value: unknown, fallback = 0): number => {
-  const numericValue = Number(value ?? fallback);
-  return Number.isFinite(numericValue) ? numericValue : fallback;
-};
-
-const toStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return [];
-};
-
-const normalizeDifficulty = (value: unknown): TourDifficulty => {
-  const difficulty = String(value ?? 'Moderate').toLowerCase();
-  if (difficulty === 'easy') return 'Easy';
-  if (difficulty === 'hard') return 'Hard';
-  if (difficulty === 'extreme') return 'Extreme';
-  return 'Moderate';
-};
-
-const normalizeStatus = (value: unknown): TourStatus => {
-  const status = String(value ?? 'active').toLowerCase();
-  if (status === 'draft') return 'draft';
-  if (status === 'archived') return 'archived';
-  return 'active';
-};
 
 const formatDurationLabel = (value: unknown): string => {
   if (typeof value === 'string') {
@@ -102,90 +49,28 @@ const formatDurationLabel = (value: unknown): string => {
     if (!trimmedValue) return '--';
 
     const numericDuration = Number(trimmedValue);
-    if (Number.isFinite(numericDuration)) return `${numericDuration} giá»`;
+    if (Number.isFinite(numericDuration)) return `${numericDuration} gio`;
     return trimmedValue;
   }
 
-  const numericDuration = toNumber(value, 0);
-  return numericDuration > 0 ? `${numericDuration} giá»` : '--';
+  const numericDuration = toPublicTourNumber(value, 0);
+  return numericDuration > 0 ? `${numericDuration} gio` : '--';
 };
 
-const getDiscoverTourKey = (
-  tour: Partial<Tour> & { tourId?: string | number },
-  index: number,
-): string => {
-  const stableId = tour.id ?? tour.tourId;
-  if (stableId !== undefined && stableId !== null && String(stableId).trim()) {
-    return String(stableId);
-  }
-
-  return `discover-tour-${index}`;
-};
-
-const mapBackendTourToDiscoverTour = (tour: BackendDiscoverTour): DiscoverTour => {
-  const imageUrls = [
-    ...toStringArray(tour.imageUrls),
-    ...toStringArray(tour.thumbnailUrl),
-    ...toStringArray(tour.imageUrl),
-    ...toStringArray(tour.coverImageUrl),
-  ];
-  const title = tour.title ?? tour.name ?? tour.tourName ?? 'Untitled tour';
-  const destination =
-    tour.destination ??
-    tour.destinationName ??
-    tour.meetingPoint ??
-    tour.location ??
-    tour.province ??
-    '--';
-  const distanceValue = toNumber(tour.distance ?? tour.distanceKm ?? tour.route?.distanceKm, 0);
-  const durationValue = toNumber(
-    tour.duration ??
-      (tour.estimatedDurationMin ? Number(tour.estimatedDurationMin) / 60 : undefined),
-    0,
-  );
-  const durationLabel = formatDurationLabel(tour.duration);
-
-  return {
-    id: String(tour.id ?? tour.tourId ?? ''),
-    title,
-    description: tour.description ?? '',
-    destination,
-    province: tour.province ?? destination,
-    imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
-    thumbnailUrl: imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR,
-    difficulty: normalizeDifficulty(tour.difficulty),
-    distance: distanceValue,
-    duration: durationValue,
-    elevation: toNumber(tour.elevation ?? tour.route?.elevationGain, 0),
-    maxParticipants: toNumber(tour.maxParticipants, 0),
-    currentParticipants: toNumber(tour.currentParticipants ?? tour.bookingsCount, 0),
-    pricePerPerson: toNumber(tour.pricePerPerson ?? tour.price, 0),
-    currency: tour.currency ?? 'VND',
-    rating: toNumber(tour.rating ?? tour.averageRating ?? tour.ratingAverage, 0),
-    reviewCount: toNumber(tour.reviewCount ?? tour.reviewsCount, 0),
-    highlights: Array.isArray(tour.highlights) ? tour.highlights : [],
-    itinerary: Array.isArray(tour.itinerary) ? tour.itinerary : [],
-    reviews: Array.isArray(tour.reviews) ? tour.reviews : [],
-    guideId: String(tour.guideId ?? tour.providerId ?? tour.guide?.id ?? ''),
-    guideName: tour.guideName ?? tour.providerName ?? tour.guide?.name ?? 'Chektrek Guide',
-    guideAvatarUrl: tour.guideAvatarUrl ?? tour.guide?.avatarUrl,
-    tags: toStringArray(tour.tags),
-    isFeatured: Boolean(tour.isFeatured),
-    availableDates: toStringArray(tour.availableDates),
-    status: normalizeStatus(tour.status),
-    createdAt: tour.createdAt ?? new Date().toISOString(),
-    distanceLabel: `${distanceValue}km`,
-    durationLabel,
-  };
+const getDifficultyLabel = (difficulty: Tour['difficulty']): string => {
+  if (difficulty === 'Easy') return 'De';
+  if (difficulty === 'Moderate') return 'Trung binh';
+  return 'Kho';
 };
 
 const DiscoverTourCard: React.FC<{
-  tour: DiscoverTour;
-  onPress: (tour: DiscoverTour) => void;
+  tour: Tour;
+  onPress: (tour: Tour) => void;
 }> = ({ tour, onPress }) => {
   const [isLiked, setIsLiked] = useState(false);
-  const safeRating = Number(tour.rating ?? 0);
-  const ratingValue = Number.isFinite(safeRating) ? safeRating : 0;
+  const ratingValue = toPublicTourNumber(tour.rating ?? 0, 0);
+  const distanceValue = toPublicTourNumber(tour.distance ?? 0, 0);
+  const durationLabel = formatDurationLabel(tour.duration);
   const title = tour.title || 'Untitled tour';
   const destination = tour.destination || '--';
 
@@ -216,22 +101,16 @@ const DiscoverTourCard: React.FC<{
 
           <View style={styles.statItem}>
             <View style={styles.difficultyDot} />
-            <Text style={styles.statText}>
-              {tour.difficulty === 'Easy'
-                ? 'Dễ'
-                : tour.difficulty === 'Moderate'
-                  ? 'Trung bình'
-                  : 'Khó'}
-            </Text>
+            <Text style={styles.statText}>{getDifficultyLabel(tour.difficulty)}</Text>
           </View>
 
           <Text style={styles.dot}>•</Text>
 
-          <Text style={styles.statText}>{tour.distanceLabel}</Text>
+          <Text style={styles.statText}>{distanceValue}km</Text>
 
           <Text style={styles.dot}>•</Text>
 
-          <Text style={styles.statText}>{tour.durationLabel}</Text>
+          <Text style={styles.statText}>{durationLabel}</Text>
         </View>
 
         <TouchableOpacity
@@ -239,7 +118,7 @@ const DiscoverTourCard: React.FC<{
           onPress={() => onPress(tour)}
           activeOpacity={0.8}
         >
-          <Text style={styles.detailBtnText}>Chi tiết</Text>
+          <Text style={styles.detailBtnText}>Chi tiet</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -248,57 +127,60 @@ const DiscoverTourCard: React.FC<{
 
 export const DiscoverScreen: React.FC = () => {
   const navigation = useNavigation<DiscoverNavProp>();
+  const publicTourFeedVersion = usePublicTourFeedStore(state => state.version);
   const [search, setSearch] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('Easy');
-  const [tours, setTours] = useState<DiscoverTour[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState('');
+  const [tours, setTours] = useState<Tour[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadTours = useCallback(async ({ showLoading = false } = {}) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
 
-    const loadTours = async () => {
-      try {
-        const response = await toursApi.getAll({ limit: 50 });
-        const items = Array.isArray(response?.data) ? response.data : [];
-
-        if (isMounted) {
-          setTours(items.map(tour => mapBackendTourToDiscoverTour(tour as BackendDiscoverTour)));
-        }
-      } catch {
-        if (isMounted) {
-          setTours([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadTours();
-
-    return () => {
-      isMounted = false;
-    };
+    try {
+      const response = await toursApi.getAll({ limit: 50 });
+      const items = Array.isArray(response?.data) ? response.data : [];
+      setTours(mapBackendPublicTours(items));
+    } catch {
+      setTours([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTours({ showLoading: tours.length === 0 });
+    }, [loadTours, publicTourFeedVersion, tours.length]),
+  );
 
   const filteredTours = useMemo(
     () =>
       tours.filter(tour => {
-        const normalizedSearch = search.toLowerCase();
+        const normalizedSearch = search.trim().toLowerCase();
         const title = tour.title?.toLowerCase() ?? '';
         const destination = tour.destination?.toLowerCase() ?? '';
         const matchSearch =
-          !search || title.includes(normalizedSearch) || destination.includes(normalizedSearch);
+          !normalizedSearch ||
+          title.includes(normalizedSearch) ||
+          destination.includes(normalizedSearch);
         const matchFilter = !selectedFilter || tour.difficulty === selectedFilter;
         return matchSearch && matchFilter;
       }),
     [search, selectedFilter, tours],
   );
 
-  const handleTourPress = (tour: DiscoverTour) => {
+  const handleTourPress = (tour: Tour) => {
     navigation.navigate('TourDetail', { tourId: tour.id });
   };
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void loadTours();
+  }, [loadTours]);
 
   return (
     <SafeScreen backgroundColor="transparent">
@@ -315,7 +197,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Khám phá</Text>
+        <Text style={styles.headerTitle}>Kham pha</Text>
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => navigation.navigate('Notifications')}
@@ -326,17 +208,13 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.searchWrapper}>
-        <SearchBar
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Tìm kiếm tuyến đường"
-        />
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tim kiem tuyen duong" />
       </View>
 
       <View style={styles.filtersWrapper}>
         <FlatList
           data={FILTER_CATEGORIES}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.id || 'all'}
           renderItem={({ item }) => (
             <CategoryChip
               label={item.label}
@@ -355,15 +233,18 @@ export const DiscoverScreen: React.FC = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#0A2518" />
+        }
       >
         <View style={styles.quickCardsRow}>
           <View style={styles.quickCard}>
             <MaterialCommunityIcons name="crown-outline" size={26} color="#0A2518" />
-            <Text style={styles.quickCardText}>Tổng tour: {tours.length}</Text>
+            <Text style={styles.quickCardText}>Tong tour: {tours.length}</Text>
           </View>
           <View style={styles.quickCard}>
             <Ionicons name="map-outline" size={24} color="#0A2518" />
-            <Text style={styles.quickCardText}>Khám phá: {filteredTours.length}</Text>
+            <Text style={styles.quickCardText}>Ket qua: {filteredTours.length}</Text>
           </View>
         </View>
 
@@ -373,15 +254,15 @@ export const DiscoverScreen: React.FC = () => {
           ) : filteredTours.length > 0 ? (
             filteredTours.map((tour, index) => (
               <DiscoverTourCard
-                key={getDiscoverTourKey(tour, index)}
+                key={getPublicTourStableId(tour, index)}
                 tour={tour}
                 onPress={handleTourPress}
               />
             ))
           ) : (
             <EmptyState
-              title="Chưa có dữ liệu tour"
-              message="Hiện chưa có tour phù hợp để hiển thị."
+              title="Chua co du lieu tour"
+              message="Hien chua co tour phu hop de hien thi."
             />
           )}
         </View>

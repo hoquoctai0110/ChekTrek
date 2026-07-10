@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Alert,
   View,
@@ -25,11 +25,12 @@ import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { Shadows } from '@theme/shadows';
 import { RootStackParamList } from '@navigation/types';
-import { Tour, TourDifficulty, TourStatus } from '../../../types';
+import { Tour } from '../../../types';
 import { useAuthStore } from '@store/authStore';
 import { toursApi } from '@services/api/tours.api';
 import { ProviderSosAlert, sosApi } from '@services/api/sos.api';
-import { PLACEHOLDER_IMAGES } from '@constants/index';
+import { mapBackendPublicTours } from '@services/tours/publicTours';
+import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -57,57 +58,6 @@ const LANGUAGES = [
 
 const SOS_POLL_INTERVAL_MS = 15000;
 
-type BackendTour = Partial<Tour> & {
-  tourId?: string | number;
-  name?: string;
-  tourName?: string;
-  location?: string;
-  meetingPoint?: string;
-  destinationName?: string;
-  imageUrl?: string;
-  coverImageUrl?: string;
-  price?: number;
-  distanceKm?: number;
-  estimatedDurationMin?: number;
-  averageRating?: number;
-  ratingAverage?: number;
-  reviewsCount?: number;
-  bookingsCount?: number;
-  providerId?: string | number;
-  providerName?: string;
-  guide?: {
-    id?: string | number;
-    name?: string;
-    avatarUrl?: string;
-  };
-};
-
-const normalizeDifficulty = (value: unknown): TourDifficulty => {
-  const difficulty = String(value ?? 'Moderate').toLowerCase();
-  if (difficulty === 'easy') return 'Easy';
-  if (difficulty === 'hard') return 'Hard';
-  if (difficulty === 'extreme') return 'Extreme';
-  return 'Moderate';
-};
-
-const normalizeStatus = (value: unknown): TourStatus => {
-  const status = String(value ?? 'active').toLowerCase();
-  if (status === 'draft') return 'draft';
-  if (status === 'archived') return 'archived';
-  return 'active';
-};
-
-const toNumber = (value: unknown, fallback = 0): number => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : fallback;
-};
-
-const toStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return [];
-};
-
 const isNetworkError = (error: unknown): boolean => {
   const maybeAxios = error as { code?: string; message?: string; response?: unknown };
   const message = String(maybeAxios.message ?? '').toLowerCase();
@@ -120,58 +70,6 @@ const isNetworkError = (error: unknown): boolean => {
       message.includes('timeout') ||
       message.includes('offline_mode'))
   );
-};
-
-const mapBackendTourToCardTour = (tour: BackendTour): Tour => {
-  const imageUrls = [
-    ...toStringArray(tour.imageUrls),
-    ...toStringArray(tour.thumbnailUrl),
-    ...toStringArray(tour.imageUrl),
-    ...toStringArray(tour.coverImageUrl),
-  ];
-  const thumbnailUrl = imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR;
-  const destination =
-    tour.destination ??
-    tour.destinationName ??
-    tour.meetingPoint ??
-    tour.location ??
-    tour.province ??
-    'Chektrek';
-
-  const title = tour.title ?? tour.name ?? tour.tourName ?? 'Untitled tour';
-
-  return {
-    id: String(tour.id ?? tour.tourId ?? `${title}-${destination}`),
-    title,
-    description: tour.description ?? '',
-    destination,
-    province: tour.province ?? destination,
-    imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
-    thumbnailUrl,
-    difficulty: normalizeDifficulty(tour.difficulty),
-    distance: toNumber(tour.distance ?? tour.distanceKm),
-    duration: toNumber(
-      tour.duration ?? (tour.estimatedDurationMin ? Number(tour.estimatedDurationMin) / 60 : undefined),
-    ),
-    elevation: toNumber(tour.elevation),
-    maxParticipants: toNumber(tour.maxParticipants),
-    currentParticipants: toNumber(tour.currentParticipants ?? tour.bookingsCount),
-    pricePerPerson: toNumber(tour.pricePerPerson ?? tour.price),
-    currency: tour.currency ?? 'VND',
-    rating: toNumber(tour.rating ?? tour.averageRating ?? tour.ratingAverage),
-    reviewCount: toNumber(tour.reviewCount ?? tour.reviewsCount),
-    highlights: toStringArray(tour.highlights),
-    itinerary: tour.itinerary ?? [],
-    reviews: tour.reviews ?? [],
-    guideId: String(tour.guideId ?? tour.providerId ?? tour.guide?.id ?? ''),
-    guideName: tour.guideName ?? tour.providerName ?? tour.guide?.name ?? 'Chektrek Guide',
-    guideAvatarUrl: tour.guideAvatarUrl ?? tour.guide?.avatarUrl,
-    tags: toStringArray(tour.tags),
-    isFeatured: Boolean(tour.isFeatured),
-    availableDates: toStringArray(tour.availableDates),
-    status: normalizeStatus(tour.status),
-    createdAt: tour.createdAt ?? new Date().toISOString(),
-  };
 };
 
 const formatDateTime = (value?: string): string => {
@@ -196,6 +94,7 @@ export const HomeScreen: React.FC = () => {
   const user = useAuthStore(s => s.user);
   const isOfflineMode = useAuthStore(s => s.isOfflineMode);
   const setOfflineMode = useAuthStore(s => s.setOfflineMode);
+  const publicTourFeedVersion = usePublicTourFeedStore(s => s.version);
   const role = user?.role ?? 'TREKKER';
   const [selectedLang, setSelectedLang] = useState('vi');
   const [notifications, setNotifications] = useState<
@@ -256,9 +155,7 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const response = await toursApi.getAll({ limit: 20 });
-      const mappedTours = response.data.map(tour =>
-        mapBackendTourToCardTour(tour as unknown as BackendTour),
-      );
+      const mappedTours = mapBackendPublicTours(response?.data);
       setTours(mappedTours);
     } catch (error) {
       console.log('[HomeScreen] failed to fetch tours:', error);
@@ -329,9 +226,11 @@ export const HomeScreen: React.FC = () => {
     }
   }, [isOfflineMode, openProviderSosMap, role]);
 
-  useEffect(() => {
-    fetchTours({ showLoading: true });
-  }, [fetchTours]);
+  useFocusEffect(
+    useCallback(() => {
+      void fetchTours({ showLoading: tours.length === 0 });
+    }, [fetchTours, publicTourFeedVersion, tours.length]),
+  );
 
   useFocusEffect(
     useCallback(() => {
