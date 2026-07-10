@@ -18,6 +18,8 @@ import axios from 'axios';
 
 import { RootStackParamList } from '@navigation/types';
 import { CreateReviewPayload, reviewsApi } from '@services/api/reviews.api';
+import { invalidatePublicTourCardCache } from '@services/tours/publicTours';
+import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
 import { Colors } from '@theme/colors';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Radius } from '@theme/radius';
@@ -71,6 +73,7 @@ export const ReviewFormScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<ScreenRoute>();
   const insets = useSafeAreaInsets();
+  const invalidatePublicTourFeed = usePublicTourFeedStore(state => state.invalidate);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,6 +99,8 @@ export const ReviewFormScreen: React.FC = () => {
 
     try {
       await reviewsApi.createReview(payload);
+      invalidatePublicTourCardCache(route.params.tourId);
+      invalidatePublicTourFeed();
       Alert.alert('Đánh giá thành công', 'Cảm ơn bạn đã chia sẻ trải nghiệm.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -185,7 +190,9 @@ export const ReviewFormScreen: React.FC = () => {
             disabled={rating === 0 || isSubmitting}
             activeOpacity={0.85}
           >
-            <Text style={styles.submitText}>{isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}</Text>
+            <Text style={styles.submitText}>
+              {isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -272,7 +279,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     backgroundColor: Colors.errorContainer,
   },
-  errorText: { flex: 1, fontFamily: FontFamily.medium, fontSize: FontSize.sm, color: Colors.error },
+  errorText: {
+    flex: 1,
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.error,
+  },
   submitButton: {
     minHeight: 52,
     alignItems: 'center',

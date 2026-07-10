@@ -6,8 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
-  Image,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -18,131 +16,43 @@ import { SearchBar } from '@components/common/SearchBar';
 import { CategoryChip } from '@components/common/CategoryChip';
 import { EmptyState } from '@components/common/EmptyState';
 import { LoadingSpinner } from '@components/common/LoadingSpinner';
+import { TourCard } from '@components/cards/TourCard';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
-import { Tour } from '@/types';
 import { RootStackParamList } from '@navigation/types';
-import { toursApi } from '@services/api/tours.api';
-import {
-  getPublicTourStableId,
-  mapBackendPublicTours,
-  toPublicTourNumber,
-} from '@services/tours/publicTours';
+import { loadPublicTourCardModels, PublicTourListItem } from '@services/tours/publicTours';
 import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
+import { TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
 
 type DiscoverNavProp = NativeStackNavigationProp<RootStackParamList>;
-const { width } = Dimensions.get('window');
 
 const FILTER_CATEGORIES = [
-  { id: '', label: 'Tất cả' },
-  { id: 'Easy', label: 'Dễ' },
-  { id: 'Moderate', label: 'Trung bình' },
-  { id: 'Hard', label: 'Khó' },
+  { id: '', label: TOUR_DISPLAY_TEXT.allCategories },
+  { id: 'Easy', label: TOUR_DISPLAY_TEXT.easy },
+  { id: 'Moderate', label: TOUR_DISPLAY_TEXT.moderate },
+  { id: 'Hard', label: TOUR_DISPLAY_TEXT.hard },
 ];
-
-const formatDurationLabel = (value: unknown): string => {
-  if (typeof value === 'string') {
-    const trimmedValue = value.trim();
-    if (!trimmedValue) return '--';
-
-    const numericDuration = Number(trimmedValue);
-    if (Number.isFinite(numericDuration)) return `${numericDuration} giờ`;
-    return trimmedValue;
-  }
-
-  const numericDuration = toPublicTourNumber(value, 0);
-  return numericDuration > 0 ? `${numericDuration} giờ` : '--';
-};
-
-const getDifficultyLabel = (difficulty: Tour['difficulty']): string => {
-  if (difficulty === 'Easy') return 'Dễ';
-  if (difficulty === 'Moderate') return 'Trung bình';
-  return 'Khó';
-};
-
-const DiscoverTourCard: React.FC<{
-  tour: Tour;
-  onPress: (tour: Tour) => void;
-}> = ({ tour, onPress }) => {
-  const [isLiked, setIsLiked] = useState(false);
-  const ratingValue = toPublicTourNumber(tour.rating ?? 0, 0);
-  const distanceValue = toPublicTourNumber(tour.distance ?? 0, 0);
-  const durationLabel = formatDurationLabel(tour.duration);
-  const title = tour.title || 'Untitled tour';
-  const destination = tour.destination || '--';
-
-  return (
-    <View style={styles.tourCard}>
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: tour.thumbnailUrl }} style={styles.image} resizeMode="cover" />
-        <TouchableOpacity
-          style={styles.heartBtn}
-          onPress={() => setIsLiked(!isLiked)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color="#0A2518" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardSubtitle}>{destination}</Text>
-
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.statText}>{Number(ratingValue ?? 0).toFixed(1)}</Text>
-          </View>
-
-          <Text style={styles.dot}>•</Text>
-
-          <View style={styles.statItem}>
-            <View style={styles.difficultyDot} />
-            <Text style={styles.statText}>{getDifficultyLabel(tour.difficulty)}</Text>
-          </View>
-
-          <Text style={styles.dot}>•</Text>
-
-          <Text style={styles.statText}>{distanceValue}km</Text>
-
-          <Text style={styles.dot}>•</Text>
-
-          <Text style={styles.statText}>{durationLabel}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.detailBtn}
-          onPress={() => onPress(tour)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.detailBtnText}>Chi tiết</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 export const DiscoverScreen: React.FC = () => {
   const navigation = useNavigation<DiscoverNavProp>();
   const publicTourFeedVersion = usePublicTourFeedStore(state => state.version);
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('');
-  const [tours, setTours] = useState<Tour[]>([]);
+  const [tours, setTours] = useState<PublicTourListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadTours = useCallback(async ({ showLoading = false } = {}) => {
+  const loadTours = useCallback(async ({ showLoading = false, forceRefresh = false } = {}) => {
     if (showLoading) {
       setIsLoading(true);
     }
 
     try {
-      const response = await toursApi.getAll({ limit: 50 });
-      const items = Array.isArray(response?.data) ? response.data : [];
-      setTours(mapBackendPublicTours(items));
+      const items = await loadPublicTourCardModels({ forceRefresh, limit: 50 });
+      setTours(items);
     } catch {
       setTours([]);
     } finally {
@@ -153,33 +63,37 @@ export const DiscoverScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      void loadTours({ showLoading: tours.length === 0 });
+      void loadTours({
+        showLoading: tours.length === 0,
+        forceRefresh: publicTourFeedVersion > 0,
+      });
     }, [loadTours, publicTourFeedVersion, tours.length]),
   );
 
-  const filteredTours = useMemo(
-    () =>
-      tours.filter(tour => {
-        const normalizedSearch = search.trim().toLowerCase();
-        const title = tour.title?.toLowerCase() ?? '';
-        const destination = tour.destination?.toLowerCase() ?? '';
-        const matchSearch =
-          !normalizedSearch ||
-          title.includes(normalizedSearch) ||
-          destination.includes(normalizedSearch);
-        const matchFilter = !selectedFilter || tour.difficulty === selectedFilter;
-        return matchSearch && matchFilter;
-      }),
-    [search, selectedFilter, tours],
-  );
+  const filteredTours = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-  const handleTourPress = (tour: Tour) => {
+    return tours.filter(item => {
+      const { tour } = item;
+      const title = tour.title?.toLowerCase() ?? '';
+      const destination = tour.destination?.toLowerCase() ?? '';
+      const matchSearch =
+        !normalizedSearch ||
+        title.includes(normalizedSearch) ||
+        destination.includes(normalizedSearch);
+      const matchFilter = !selectedFilter || tour.difficulty === selectedFilter;
+
+      return matchSearch && matchFilter;
+    });
+  }, [search, selectedFilter, tours]);
+
+  const handleTourPress = (tour: PublicTourListItem['tour']) => {
     navigation.navigate('TourDetail', { tourId: tour.id });
   };
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void loadTours();
+    void loadTours({ forceRefresh: true });
   }, [loadTours]);
 
   return (
@@ -197,7 +111,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Khám phá</Text>
+        <Text style={styles.headerTitle}>{TOUR_DISPLAY_TEXT.discoverTitle}</Text>
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => navigation.navigate('Notifications')}
@@ -208,7 +122,11 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.searchWrapper}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm kiếm tuyến đường" />
+        <SearchBar
+          value={search}
+          onChangeText={setSearch}
+          placeholder={TOUR_DISPLAY_TEXT.searchPlaceholder}
+        />
       </View>
 
       <View style={styles.filtersWrapper}>
@@ -252,17 +170,19 @@ export const DiscoverScreen: React.FC = () => {
           {isLoading ? (
             <LoadingSpinner />
           ) : filteredTours.length > 0 ? (
-            filteredTours.map((tour, index) => (
-              <DiscoverTourCard
-                key={getPublicTourStableId(tour, index)}
-                tour={tour}
+            filteredTours.map(item => (
+              <TourCard
+                key={item.tour.id}
+                tour={item.tour}
+                display={item.card}
                 onPress={handleTourPress}
+                style={styles.tourCard}
               />
             ))
           ) : (
             <EmptyState
-              title="Chưa có dữ liệu tour"
-              message="Hiện chưa có tour phù hợp để hiển thị."
+              title={TOUR_DISPLAY_TEXT.noTourData}
+              message={TOUR_DISPLAY_TEXT.noMatchingTours}
             />
           )}
         </View>
@@ -358,99 +278,6 @@ const styles = StyleSheet.create({
     minHeight: 180,
   },
   tourCard: {
-    width: width - Spacing[10],
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.card,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(10, 37, 24, 0.05)',
-  },
-  imageContainer: {
-    height: 200,
-    position: 'relative',
-  },
-  image: {
     width: '100%',
-    height: '100%',
-  },
-  heartBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#00F582',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2.5,
-  },
-  cardContent: {
-    padding: Spacing[4],
-    gap: Spacing[2],
-  },
-  cardTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.xl,
-    color: '#0A2518',
-  },
-  cardSubtitle: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.xs,
-    color: 'rgba(10, 37, 24, 0.6)',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-    marginVertical: Spacing[1],
-    flexWrap: 'wrap',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[1],
-  },
-  difficultyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#00F582',
-  },
-  statText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
-    color: '#0A2518',
-  },
-  dot: {
-    color: 'rgba(10, 37, 24, 0.4)',
-    fontSize: FontSize.xs,
-  },
-  detailBtn: {
-    backgroundColor: '#00F582',
-    borderRadius: Radius.button,
-    paddingVertical: Spacing[3],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing[2],
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  detailBtnText: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
-    color: '#0A2518',
   },
 });

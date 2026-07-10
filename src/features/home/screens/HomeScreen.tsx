@@ -27,10 +27,10 @@ import { Shadows } from '@theme/shadows';
 import { RootStackParamList } from '@navigation/types';
 import { Tour } from '../../../types';
 import { useAuthStore } from '@store/authStore';
-import { toursApi } from '@services/api/tours.api';
 import { ProviderSosAlert, sosApi } from '@services/api/sos.api';
-import { mapBackendPublicTours } from '@services/tours/publicTours';
+import { loadPublicTourCardModels, PublicTourListItem } from '@services/tours/publicTours';
 import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
+import { TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -100,7 +100,7 @@ export const HomeScreen: React.FC = () => {
   const [notifications, setNotifications] = useState<
     Array<{ id: string; title: string; body: string; time: string; unread: boolean; icon: string }>
   >([]);
-  const [tours, setTours] = useState<Tour[]>([]);
+  const [tours, setTours] = useState<PublicTourListItem[]>([]);
   const [isToursLoading, setIsToursLoading] = useState(true);
   const [toursError, setToursError] = useState<string | null>(null);
   const [providerSosAlerts, setProviderSosAlerts] = useState<ProviderSosAlert[]>([]);
@@ -110,7 +110,7 @@ export const HomeScreen: React.FC = () => {
     const query = search.trim().toLowerCase();
     if (!query) return tours;
 
-    return tours.filter(tour =>
+    return tours.filter(({ tour }) =>
       [
         tour.title,
         tour.description,
@@ -141,7 +141,7 @@ export const HomeScreen: React.FC = () => {
   );
   const pendingSosCount = pendingSosAlerts.length;
 
-  const fetchTours = useCallback(async ({ showLoading = false } = {}) => {
+  const fetchTours = useCallback(async ({ showLoading = false, forceRefresh = false } = {}) => {
     if (isOfflineMode) {
       setIsToursLoading(false);
       setToursError('Bạn đang ở chế độ Offline');
@@ -154,8 +154,7 @@ export const HomeScreen: React.FC = () => {
     setToursError(null);
 
     try {
-      const response = await toursApi.getAll({ limit: 20 });
-      const mappedTours = mapBackendPublicTours(response?.data);
+      const mappedTours = await loadPublicTourCardModels({ forceRefresh, limit: 20 });
       setTours(mappedTours);
     } catch (error) {
       console.log('[HomeScreen] failed to fetch tours:', error);
@@ -228,7 +227,10 @@ export const HomeScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      void fetchTours({ showLoading: tours.length === 0 });
+      void fetchTours({
+        showLoading: tours.length === 0,
+        forceRefresh: publicTourFeedVersion > 0,
+      });
     }, [fetchTours, publicTourFeedVersion, tours.length]),
   );
 
@@ -255,7 +257,7 @@ export const HomeScreen: React.FC = () => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     Promise.all([
-      fetchTours(),
+      fetchTours({ forceRefresh: true }),
       role === 'TOUR_PROVIDER' ? fetchProviderSos() : Promise.resolve(),
     ]).finally(() => setRefreshing(false));
   }, [fetchProviderSos, fetchTours, role]);
@@ -414,7 +416,7 @@ export const HomeScreen: React.FC = () => {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="Tìm tuyến đường, tour..."
+          placeholder={TOUR_DISPLAY_TEXT.searchPlaceholder}
           style={styles.searchBar}
         />
 
@@ -427,12 +429,12 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{user?.totalDistance ?? 0} km</Text>
-            <Text style={styles.statLabel}>Khoảng cách</Text>
+            <Text style={styles.statLabel}>{TOUR_DISPLAY_TEXT.distance}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{((user?.totalElevation ?? 0) / 1000).toFixed(1)} km</Text>
-            <Text style={styles.statLabel}>Độ cao</Text>
+            <Text style={styles.statLabel}>{TOUR_DISPLAY_TEXT.elevation}</Text>
           </View>
         </View>
 
@@ -455,15 +457,15 @@ export const HomeScreen: React.FC = () => {
         {/* Featured Tours */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tuyến Nổi Bật</Text>
+            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.featuredTours}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Discover' as never)} activeOpacity={0.7}>
-              <Text style={styles.seeAll}>Xem tất cả</Text>
+              <Text style={styles.seeAll}>{TOUR_DISPLAY_TEXT.seeAll}</Text>
             </TouchableOpacity>
           </View>
           {isToursLoading ? (
             <View style={styles.toursState}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.toursStateText}>Đang tải tour...</Text>
+              <Text style={styles.toursStateText}>{TOUR_DISPLAY_TEXT.loadingTours}</Text>
             </View>
           ) : toursError ? (
             <View style={styles.toursState}>
@@ -474,19 +476,24 @@ export const HomeScreen: React.FC = () => {
                 activeOpacity={0.8}
                 disabled={isOfflineMode}
               >
-                <Text style={styles.retryBtnText}>Thử lại</Text>
+                <Text style={styles.retryBtnText}>{TOUR_DISPLAY_TEXT.retry}</Text>
               </TouchableOpacity>
             </View>
           ) : filteredTours.length === 0 ? (
             <View style={styles.toursState}>
-              <Text style={styles.toursStateText}>Chưa có tour nào</Text>
+              <Text style={styles.toursStateText}>{TOUR_DISPLAY_TEXT.noTours}</Text>
             </View>
           ) : (
             <FlatList
               data={filteredTours}
-              keyExtractor={item => item.id}
+              keyExtractor={item => item.tour.id}
               renderItem={({ item }) => (
-                <TourCard tour={item} onPress={handleTourPress} style={styles.tourCard} />
+                <TourCard
+                  tour={item.tour}
+                  display={item.card}
+                  onPress={handleTourPress}
+                  style={styles.tourCard}
+                />
               )}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -500,7 +507,7 @@ export const HomeScreen: React.FC = () => {
         {/* Upcoming Trips */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Chuyến Đi Sắp Tới</Text>
+            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.upcomingTrips}</Text>
             <TouchableOpacity
               onPress={() => {
                 if (role === 'TOUR_PROVIDER') {
@@ -511,26 +518,26 @@ export const HomeScreen: React.FC = () => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.seeAll}>Xem tất cả</Text>
+              <Text style={styles.seeAll}>{TOUR_DISPLAY_TEXT.seeAll}</Text>
             </TouchableOpacity>
           </View>
 
           <EmptyState
             iconName="trail-sign-outline"
-            title="Tính năng đang phát triển"
-            message="Danh sách chuyến đi sắp tới sẽ hiển thị khi dữ liệu tracking được kết nối."
+            title={TOUR_DISPLAY_TEXT.featureInProgress}
+            message={TOUR_DISPLAY_TEXT.upcomingTripsMessage}
           />
         </View>
 
         {/* Nearby Destinations */}
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Điểm Đến Gần Bạn</Text>
+            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.nearbyDestinations}</Text>
           </View>
           <EmptyState
             iconName="location-outline"
-            title="Tính năng đang phát triển"
-            message="Điểm đến gần bạn sẽ được bổ sung khi dịch vụ gợi ý hoàn thiện."
+            title={TOUR_DISPLAY_TEXT.featureInProgress}
+            message={TOUR_DISPLAY_TEXT.nearbyDestinationMessage}
           />
         </View>
       </ScrollView>

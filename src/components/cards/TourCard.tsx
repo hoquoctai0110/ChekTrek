@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  ViewStyle,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ViewStyle } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Tour, TourDifficulty } from '@/types';
 import { Colors } from '@theme/colors';
@@ -15,25 +8,34 @@ import { Radius } from '@theme/radius';
 import { Shadows } from '@theme/shadows';
 import { Spacing } from '@theme/spacing';
 import { DIFFICULTY_CONFIG } from '@constants/index';
+import { TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
+import type { TourCardDisplayModel } from '@services/tours/publicTours';
 
 interface TourCardProps {
   tour: Tour;
   onPress: (tour: Tour) => void;
   style?: ViewStyle;
   compact?: boolean;
+  display?: TourCardDisplayModel;
 }
 
-export const TourCard: React.FC<TourCardProps> = ({ tour, onPress, style, compact = false }) => {
+export const TourCard: React.FC<TourCardProps> = ({
+  tour,
+  onPress,
+  style,
+  compact = false,
+  display,
+}) => {
   const difficulty = DIFFICULTY_CONFIG[tour.difficulty as TourDifficulty];
-  const safeRating = Number.isFinite(Number(tour.rating)) ? Number(tour.rating) : 0;
-  const safeDistance = Number.isFinite(Number(tour.distance)) ? Number(tour.distance) : 0;
-  const safeDuration = Number.isFinite(Number(tour.duration)) ? Number(tour.duration) : 0;
-  const safeTitle = tour.title || 'Chuyến đi';
-  const safeDestination = tour.destination || 'Đang cập nhật địa điểm';
+  const safeTitle = display?.title || tour.title || TOUR_DISPLAY_TEXT.untitledTour;
+  const safeDestination =
+    display?.location || tour.destination || TOUR_DISPLAY_TEXT.updatingLocation;
+  const ratingText = display?.ratingText || TOUR_DISPLAY_TEXT.noRating;
+  const distanceText = display?.distanceText || TOUR_DISPLAY_TEXT.noDistance;
+  const durationText = display?.durationText || '--';
+  const imageUrl = display?.imageUrl ?? tour.thumbnailUrl;
   const thumbnailSource =
-    typeof tour.thumbnailUrl === 'string' && tour.thumbnailUrl.trim()
-      ? { uri: tour.thumbnailUrl }
-      : undefined;
+    typeof imageUrl === 'string' && imageUrl.trim() ? { uri: imageUrl } : undefined;
 
   return (
     <TouchableOpacity
@@ -41,7 +43,6 @@ export const TourCard: React.FC<TourCardProps> = ({ tour, onPress, style, compac
       activeOpacity={0.9}
       style={[styles.card, compact && styles.cardCompact, style]}
     >
-      {/* Image */}
       <View style={[styles.imageContainer, compact && styles.imageContainerCompact]}>
         {thumbnailSource ? (
           <Image source={thumbnailSource} style={styles.image} resizeMode="cover" />
@@ -50,14 +51,14 @@ export const TourCard: React.FC<TourCardProps> = ({ tour, onPress, style, compac
             <Ionicons name="image-outline" size={28} color={Colors.onSurfaceVariant} />
           </View>
         )}
-        {/* Rating badge */}
         <View style={styles.ratingBadge}>
           <Ionicons name="star" size={12} color={Colors.warningAmber} />
-          <Text style={styles.ratingText}>{safeRating.toFixed(1)}</Text>
+          <Text style={styles.ratingText} numberOfLines={1}>
+            {ratingText}
+          </Text>
         </View>
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>
           {safeTitle}
@@ -72,11 +73,11 @@ export const TourCard: React.FC<TourCardProps> = ({ tour, onPress, style, compac
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <MaterialIcons name="straighten" size={12} color={Colors.onSurfaceVariant} />
-            <Text style={styles.statText}>{safeDistance} km</Text>
+            <Text style={styles.statText}>{distanceText}</Text>
           </View>
           <View style={styles.stat}>
             <Ionicons name="time-outline" size={12} color={Colors.onSurfaceVariant} />
-            <Text style={styles.statText}>{safeDuration}h</Text>
+            <Text style={styles.statText}>{durationText}</Text>
           </View>
         </View>
 
@@ -147,11 +148,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
+    maxWidth: '82%',
   },
   ratingText: {
     fontFamily: FontFamily.semiBold,
     fontSize: FontSize.xs,
     color: Colors.onSurface,
+    flexShrink: 1,
   },
   content: {
     padding: Spacing[3],
@@ -183,11 +186,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+    flex: 1,
   },
   statText: {
     fontFamily: FontFamily.medium,
     fontSize: FontSize.xs,
     color: Colors.onSurfaceVariant,
+    flexShrink: 1,
   },
   footer: {
     flexDirection: 'row',
@@ -215,4 +220,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-

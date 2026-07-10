@@ -90,6 +90,12 @@ const unwrapData = <T>(responseData: ApiResponse<T> | T): T => {
 };
 
 export const routesApi = {
+  getAllRoutes: async (): Promise<TourRoute[]> => {
+    const { data } = await apiClient.get<ApiResponse<TourRoute[]> | TourRoute[]>('/routes');
+    const routes = unwrapData(data);
+    return Array.isArray(routes) ? routes : [];
+  },
+
   getRouteById: async (routeId: number): Promise<TourRoute> => {
     const { data } = await apiClient.get<ApiResponse<TourRoute> | TourRoute>(`/routes/${routeId}`);
     return unwrapData(data);
