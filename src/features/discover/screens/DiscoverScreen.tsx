@@ -19,11 +19,11 @@ import { EmptyState } from '@components/common/EmptyState';
 import { LoadingSpinner } from '@components/common/LoadingSpinner';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { Colors } from '@theme/colors';
+import { PLACEHOLDER_IMAGES } from '@constants/index';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
-import { Tour } from '@/types';
+import { Tour, TourDifficulty, TourStatus } from '@/types';
 import { RootStackParamList } from '@navigation/types';
 import { toursApi } from '@services/api/tours.api';
 
@@ -31,16 +31,163 @@ type DiscoverNavProp = NativeStackNavigationProp<RootStackParamList>;
 const { width } = Dimensions.get('window');
 
 const FILTER_CATEGORIES = [
-  { id: 'Easy', label: 'Dễ' },
-  { id: 'Moderate', label: 'Trung Bình' },
-  { id: 'Hard', label: 'Khó' },
+  { id: 'Easy', label: 'Dá»…' },
+  { id: 'Moderate', label: 'Trung BÃ¬nh' },
+  { id: 'Hard', label: 'KhÃ³' },
 ];
 
+type BackendDiscoverTour = Partial<Tour> & {
+  tourId?: string | number;
+  name?: string;
+  tourName?: string;
+  destinationName?: string;
+  location?: string;
+  meetingPoint?: string;
+  imageUrl?: string;
+  coverImageUrl?: string;
+  price?: number | string | null;
+  distanceKm?: number | string | null;
+  estimatedDurationMin?: number | string | null;
+  averageRating?: number | string | null;
+  ratingAverage?: number | string | null;
+  reviewsCount?: number | string | null;
+  bookingsCount?: number | string | null;
+  route?: {
+    distanceKm?: number | string | null;
+    elevationGain?: number | string | null;
+  };
+  providerId?: string | number;
+  providerName?: string;
+  guide?: {
+    id?: string | number;
+    name?: string;
+    avatarUrl?: string;
+  };
+};
+
+type DiscoverTour = Tour & {
+  distanceLabel: string;
+  durationLabel: string;
+};
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  const numericValue = Number(value ?? fallback);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const toStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+};
+
+const normalizeDifficulty = (value: unknown): TourDifficulty => {
+  const difficulty = String(value ?? 'Moderate').toLowerCase();
+  if (difficulty === 'easy') return 'Easy';
+  if (difficulty === 'hard') return 'Hard';
+  if (difficulty === 'extreme') return 'Extreme';
+  return 'Moderate';
+};
+
+const normalizeStatus = (value: unknown): TourStatus => {
+  const status = String(value ?? 'active').toLowerCase();
+  if (status === 'draft') return 'draft';
+  if (status === 'archived') return 'archived';
+  return 'active';
+};
+
+const formatDurationLabel = (value: unknown): string => {
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return '--';
+
+    const numericDuration = Number(trimmedValue);
+    if (Number.isFinite(numericDuration)) return `${numericDuration} giá»`;
+    return trimmedValue;
+  }
+
+  const numericDuration = toNumber(value, 0);
+  return numericDuration > 0 ? `${numericDuration} giá»` : '--';
+};
+
+const getDiscoverTourKey = (
+  tour: Partial<Tour> & { tourId?: string | number },
+  index: number,
+): string => {
+  const stableId = tour.id ?? tour.tourId;
+  if (stableId !== undefined && stableId !== null && String(stableId).trim()) {
+    return String(stableId);
+  }
+
+  return `discover-tour-${index}`;
+};
+
+const mapBackendTourToDiscoverTour = (tour: BackendDiscoverTour): DiscoverTour => {
+  const imageUrls = [
+    ...toStringArray(tour.imageUrls),
+    ...toStringArray(tour.thumbnailUrl),
+    ...toStringArray(tour.imageUrl),
+    ...toStringArray(tour.coverImageUrl),
+  ];
+  const title = tour.title ?? tour.name ?? tour.tourName ?? 'Untitled tour';
+  const destination =
+    tour.destination ??
+    tour.destinationName ??
+    tour.meetingPoint ??
+    tour.location ??
+    tour.province ??
+    '--';
+  const distanceValue = toNumber(tour.distance ?? tour.distanceKm ?? tour.route?.distanceKm, 0);
+  const durationValue = toNumber(
+    tour.duration ??
+      (tour.estimatedDurationMin ? Number(tour.estimatedDurationMin) / 60 : undefined),
+    0,
+  );
+  const durationLabel = formatDurationLabel(tour.duration);
+
+  return {
+    id: String(tour.id ?? tour.tourId ?? ''),
+    title,
+    description: tour.description ?? '',
+    destination,
+    province: tour.province ?? destination,
+    imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
+    thumbnailUrl: imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR,
+    difficulty: normalizeDifficulty(tour.difficulty),
+    distance: distanceValue,
+    duration: durationValue,
+    elevation: toNumber(tour.elevation ?? tour.route?.elevationGain, 0),
+    maxParticipants: toNumber(tour.maxParticipants, 0),
+    currentParticipants: toNumber(tour.currentParticipants ?? tour.bookingsCount, 0),
+    pricePerPerson: toNumber(tour.pricePerPerson ?? tour.price, 0),
+    currency: tour.currency ?? 'VND',
+    rating: toNumber(tour.rating ?? tour.averageRating ?? tour.ratingAverage, 0),
+    reviewCount: toNumber(tour.reviewCount ?? tour.reviewsCount, 0),
+    highlights: Array.isArray(tour.highlights) ? tour.highlights : [],
+    itinerary: Array.isArray(tour.itinerary) ? tour.itinerary : [],
+    reviews: Array.isArray(tour.reviews) ? tour.reviews : [],
+    guideId: String(tour.guideId ?? tour.providerId ?? tour.guide?.id ?? ''),
+    guideName: tour.guideName ?? tour.providerName ?? tour.guide?.name ?? 'Chektrek Guide',
+    guideAvatarUrl: tour.guideAvatarUrl ?? tour.guide?.avatarUrl,
+    tags: toStringArray(tour.tags),
+    isFeatured: Boolean(tour.isFeatured),
+    availableDates: toStringArray(tour.availableDates),
+    status: normalizeStatus(tour.status),
+    createdAt: tour.createdAt ?? new Date().toISOString(),
+    distanceLabel: `${distanceValue}km`,
+    durationLabel,
+  };
+};
+
 const DiscoverTourCard: React.FC<{
-  tour: Tour;
-  onPress: (tour: Tour) => void;
+  tour: DiscoverTour;
+  onPress: (tour: DiscoverTour) => void;
 }> = ({ tour, onPress }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const safeRating = Number(tour.rating ?? 0);
+  const ratingValue = Number.isFinite(safeRating) ? safeRating : 0;
+  const title = tour.title || 'Untitled tour';
+  const destination = tour.destination || '--';
 
   return (
     <View style={styles.tourCard}>
@@ -51,48 +198,48 @@ const DiscoverTourCard: React.FC<{
           onPress={() => setIsLiked(!isLiked)}
           activeOpacity={0.8}
         >
-          <Ionicons
-            name={isLiked ? 'heart' : 'heart-outline'}
-            size={22}
-            color="#0A2518"
-          />
+          <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color="#0A2518" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{tour.title}</Text>
-        <Text style={styles.cardSubtitle}>{tour.destination}</Text>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardSubtitle}>{destination}</Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.statText}>{tour.rating.toFixed(1)}</Text>
+            <Text style={styles.statText}>{Number(ratingValue ?? 0).toFixed(1)}</Text>
           </View>
 
-          <Text style={styles.dot}>•</Text>
+          <Text style={styles.dot}>â€¢</Text>
 
           <View style={styles.statItem}>
             <View style={styles.difficultyDot} />
             <Text style={styles.statText}>
               {tour.difficulty === 'Easy'
-                ? 'Cơ bản'
+                ? 'CÆ¡ báº£n'
                 : tour.difficulty === 'Moderate'
-                  ? 'Trung bình'
-                  : 'Khó'}
+                  ? 'Trung bÃ¬nh'
+                  : 'KhÃ³'}
             </Text>
           </View>
 
-          <Text style={styles.dot}>•</Text>
+          <Text style={styles.dot}>â€¢</Text>
 
-          <Text style={styles.statText}>{tour.distance}km</Text>
+          <Text style={styles.statText}>{tour.distanceLabel}</Text>
 
-          <Text style={styles.dot}>•</Text>
+          <Text style={styles.dot}>â€¢</Text>
 
-          <Text style={styles.statText}>{tour.duration} giờ</Text>
+          <Text style={styles.statText}>{tour.durationLabel}</Text>
         </View>
 
-        <TouchableOpacity style={styles.detailBtn} onPress={() => onPress(tour)} activeOpacity={0.8}>
-          <Text style={styles.detailBtnText}>Chi tiết</Text>
+        <TouchableOpacity
+          style={styles.detailBtn}
+          onPress={() => onPress(tour)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.detailBtnText}>Chi tiáº¿t</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -103,7 +250,7 @@ export const DiscoverScreen: React.FC = () => {
   const navigation = useNavigation<DiscoverNavProp>();
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Easy');
-  const [tours, setTours] = useState<Tour[]>([]);
+  const [tours, setTours] = useState<DiscoverTour[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -112,8 +259,10 @@ export const DiscoverScreen: React.FC = () => {
     const loadTours = async () => {
       try {
         const response = await toursApi.getAll({ limit: 50 });
+        const items = Array.isArray(response?.data) ? response.data : [];
+
         if (isMounted) {
-          setTours(response.data);
+          setTours(items.map(tour => mapBackendTourToDiscoverTour(tour as BackendDiscoverTour)));
         }
       } catch {
         if (isMounted) {
@@ -136,17 +285,18 @@ export const DiscoverScreen: React.FC = () => {
   const filteredTours = useMemo(
     () =>
       tours.filter(tour => {
+        const normalizedSearch = search.toLowerCase();
+        const title = tour.title?.toLowerCase() ?? '';
+        const destination = tour.destination?.toLowerCase() ?? '';
         const matchSearch =
-          !search ||
-          tour.title.toLowerCase().includes(search.toLowerCase()) ||
-          tour.destination.toLowerCase().includes(search.toLowerCase());
+          !search || title.includes(normalizedSearch) || destination.includes(normalizedSearch);
         const matchFilter = !selectedFilter || tour.difficulty === selectedFilter;
         return matchSearch && matchFilter;
       }),
     [search, selectedFilter, tours],
   );
 
-  const handleTourPress = (tour: Tour) => {
+  const handleTourPress = (tour: DiscoverTour) => {
     navigation.navigate('TourDetail', { tourId: tour.id });
   };
 
@@ -165,7 +315,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Khám phá</Text>
+        <Text style={styles.headerTitle}>KhÃ¡m phÃ¡</Text>
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => navigation.navigate('Notifications')}
@@ -179,7 +329,7 @@ export const DiscoverScreen: React.FC = () => {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="Tìm kiếm tuyến đường"
+          placeholder="TÃ¬m kiáº¿m tuyáº¿n Ä‘Æ°á»ng"
         />
       </View>
 
@@ -209,11 +359,11 @@ export const DiscoverScreen: React.FC = () => {
         <View style={styles.quickCardsRow}>
           <View style={styles.quickCard}>
             <MaterialCommunityIcons name="crown-outline" size={26} color="#0A2518" />
-            <Text style={styles.quickCardText}>Tổng tour: {tours.length}</Text>
+            <Text style={styles.quickCardText}>Tá»•ng tour: {tours.length}</Text>
           </View>
           <View style={styles.quickCard}>
             <Ionicons name="map-outline" size={24} color="#0A2518" />
-            <Text style={styles.quickCardText}>Kết quả: {filteredTours.length}</Text>
+            <Text style={styles.quickCardText}>Káº¿t quáº£: {filteredTours.length}</Text>
           </View>
         </View>
 
@@ -221,13 +371,17 @@ export const DiscoverScreen: React.FC = () => {
           {isLoading ? (
             <LoadingSpinner />
           ) : filteredTours.length > 0 ? (
-            filteredTours.map(tour => (
-              <DiscoverTourCard key={tour.id} tour={tour} onPress={handleTourPress} />
+            filteredTours.map((tour, index) => (
+              <DiscoverTourCard
+                key={getDiscoverTourKey(tour, index)}
+                tour={tour}
+                onPress={handleTourPress}
+              />
             ))
           ) : (
             <EmptyState
-              title="Chưa có dữ liệu tour"
-              message="Hiện chưa có tour phù hợp để hiển thị."
+              title="ChÆ°a cÃ³ dá»¯ liá»‡u tour"
+              message="Hiá»‡n chÆ°a cÃ³ tour phÃ¹ há»£p Ä‘á»ƒ hiá»ƒn thá»‹."
             />
           )}
         </View>
@@ -378,6 +532,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing[2],
     marginVertical: Spacing[1],
+    flexWrap: 'wrap',
   },
   statItem: {
     flexDirection: 'row',
