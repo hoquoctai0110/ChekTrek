@@ -218,10 +218,10 @@ const DiscoverTourCard: React.FC<{
             <View style={styles.difficultyDot} />
             <Text style={styles.statText}>
               {tour.difficulty === 'Easy'
-                ? 'CÆ¡ báº£n'
+                ? 'Dễ'
                 : tour.difficulty === 'Moderate'
-                  ? 'Trung bÃ¬nh'
-                  : 'KhÃ³'}
+                  ? 'Trung bình'
+                  : 'Khó'}
             </Text>
           </View>
 
@@ -239,7 +239,7 @@ const DiscoverTourCard: React.FC<{
           onPress={() => onPress(tour)}
           activeOpacity={0.8}
         >
-          <Text style={styles.detailBtnText}>Chi tiáº¿t</Text>
+          <Text style={styles.detailBtnText}>Chi tiết</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -315,7 +315,7 @@ export const DiscoverScreen: React.FC = () => {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>KhÃ¡m phÃ¡</Text>
+        <Text style={styles.headerTitle}>Khám phá</Text>
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => navigation.navigate('Notifications')}
@@ -329,7 +329,7 @@ export const DiscoverScreen: React.FC = () => {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="TÃ¬m kiáº¿m tuyáº¿n Ä‘Æ°á»ng"
+          placeholder="Tìm kiếm tuyến đường"
         />
       </View>
 
@@ -380,8 +380,8 @@ export const DiscoverScreen: React.FC = () => {
             ))
           ) : (
             <EmptyState
-              title="ChÆ°a cÃ³ dá»¯ liá»‡u tour"
-              message="Hiá»‡n chÆ°a cÃ³ tour phÃ¹ há»£p Ä‘á»ƒ hiá»ƒn thá»‹."
+              title="Chưa có dữ liệu tour"
+              message="Hiện chưa có tour phù hợp để hiển thị."
             />
           )}
         </View>
