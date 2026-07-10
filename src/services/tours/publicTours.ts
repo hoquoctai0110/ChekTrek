@@ -152,6 +152,17 @@ const getOrLoadRoutes = async (forceRefresh = false): Promise<TourRoute[]> => {
   return routes;
 };
 
+const upsertRouteCache = (route: TourRoute): void => {
+  const routeId = toNullableInteger(route.routeId);
+  if (routeId === null) return;
+
+  const currentRoutes = routesCache ?? [];
+  const nextRoutes = currentRoutes.filter(existingRoute => toNullableInteger(existingRoute.routeId) !== routeId);
+  nextRoutes.push(route);
+  routesCache = nextRoutes;
+  routesCacheFetchedAt = Date.now();
+};
+
 const buildRouteLookup = (routes: TourRoute[]): Map<number, TourRoute> => {
   const routeLookup = new Map<number, TourRoute>();
 
@@ -163,6 +174,43 @@ const buildRouteLookup = (routes: TourRoute[]): Map<number, TourRoute> => {
   });
 
   return routeLookup;
+};
+
+export const loadRouteLookup = async (forceRefresh = false): Promise<Map<number, TourRoute>> => {
+  const routes = await getOrLoadRoutes(forceRefresh);
+  return buildRouteLookup(routes);
+};
+
+export const loadRouteById = async (
+  routeId: number,
+  forceRefresh = false,
+): Promise<TourRoute | null> => {
+  if (!forceRefresh && isRoutesCacheFresh()) {
+    const cachedRoute = buildRouteLookup(routesCache ?? []).get(routeId);
+    if (cachedRoute) {
+      return cachedRoute;
+    }
+  }
+
+  try {
+    const route = await routesApi.getRouteById(routeId);
+    upsertRouteCache(route);
+    return route;
+  } catch (error) {
+    if (!forceRefresh) {
+      const fallbackRoute = buildRouteLookup(routesCache ?? []).get(routeId);
+      if (fallbackRoute) {
+        return fallbackRoute;
+      }
+    }
+
+    throw error;
+  }
+};
+
+export const getRouteDistanceKm = (route: TourRoute | null | undefined): number | null => {
+  if (!route) return null;
+  return toNullableNumber(route.distanceKm);
 };
 
 const createReviewSummaryCacheKey = (tourId: string | number): string => String(tourId);

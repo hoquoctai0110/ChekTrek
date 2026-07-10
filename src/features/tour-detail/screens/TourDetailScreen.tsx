@@ -25,6 +25,8 @@ import { useSavedStore } from '@store/savedStore';
 import { toursApi } from '@services/api/tours.api';
 import { reviewsApi, TourReview, TourReviewSummary } from '@services/api/reviews.api';
 import { PLACEHOLDER_IMAGES } from '@constants/index';
+import { formatTourDistance, TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
+import { getRouteDistanceKm, loadRouteById } from '@services/tours/publicTours';
 import { Tour, TourDifficulty, TourStatus } from '../../../types';
 
 type TourDetailRouteProp = RouteProp<RootStackParamList, 'TourDetail'>;
@@ -92,6 +94,11 @@ const toNumber = (value: unknown, fallback = 0): number => {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 };
 
+const toNullableNumber = (value: unknown): number | null => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+};
+
 const toStringArray = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === 'string' && value.trim()) return [value.trim()];
@@ -142,7 +149,8 @@ const mapBackendTourDetail = (tour: BackendTourDetail): TourDetail => {
     imageUrls: imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGES.TOUR],
     thumbnailUrl: imageUrls[0] ?? PLACEHOLDER_IMAGES.TOUR,
     difficulty: normalizeDifficulty(tour.difficulty),
-    distance: toNumber(tour.distance ?? tour.distanceKm ?? tour.route?.distanceKm),
+    distance:
+      toNullableNumber(tour.distance ?? tour.distanceKm ?? tour.route?.distanceKm) ?? Number.NaN,
     duration: String(tour.duration ?? '').trim(),
     elevation: toNumber(tour.elevation ?? tour.route?.elevationGain),
     maxParticipants: toNumber(tour.maxParticipants),
@@ -185,6 +193,7 @@ export const TourDetailScreen: React.FC = () => {
   const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null | undefined>(undefined);
 
   const isSaved = useSavedStore(state => state.savedTourIds.includes(tourId));
   const toggleSaved = useSavedStore(state => state.toggleSaved);
@@ -202,6 +211,13 @@ export const TourDetailScreen: React.FC = () => {
       console.log('[TourDetail] raw API duration =', response.duration);
       const mappedTour = mapBackendTourDetail(response as unknown as BackendTourDetail);
       console.log('[TourDetail] mapped duration =', mappedTour.duration);
+      setDistanceKm(
+        Number.isFinite(mappedTour.distance)
+          ? mappedTour.distance
+          : mappedTour.routeId
+            ? undefined
+            : null,
+      );
       setTour(mappedTour);
     } catch (error) {
       console.log('[TourDetail] failed to fetch tour', error);
@@ -215,6 +231,35 @@ export const TourDetailScreen: React.FC = () => {
   useEffect(() => {
     fetchTour();
   }, [fetchTour]);
+
+  const fetchRouteDistance = useCallback(
+    async (routeId?: number, options?: { forceRefresh?: boolean }) => {
+      if (!routeId) {
+        setDistanceKm(null);
+        return;
+      }
+
+      setDistanceKm(undefined);
+
+      try {
+        const routeDetail = await loadRouteById(routeId, options?.forceRefresh);
+        setDistanceKm(getRouteDistanceKm(routeDetail));
+      } catch (error) {
+        console.log('[TourDetail] failed to fetch route distance', error);
+        setDistanceKm(null);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!tour?.routeId) {
+      setDistanceKm(tour ? null : undefined);
+      return;
+    }
+
+    void fetchRouteDistance(tour.routeId);
+  }, [fetchRouteDistance, tour?.routeId]);
 
   const fetchReviews = useCallback(async () => {
     setAreReviewsLoading(true);
@@ -289,7 +334,7 @@ export const TourDetailScreen: React.FC = () => {
     return renderState(
       <>
         <ActivityIndicator size="large" color="#0A7A4A" />
-        <Text style={styles.stateText}>Dang tai thong tin tour...</Text>
+        <Text style={styles.stateText}>Đang tải thông tin tour...</Text>
       </>,
     );
   }
@@ -297,7 +342,7 @@ export const TourDetailScreen: React.FC = () => {
   if (errorMessage) {
     return renderState(
       <>
-        <Text style={styles.stateTitle}>Khong the tai tour</Text>
+        <Text style={styles.stateTitle}>Không thể tải tour</Text>
         <Text style={styles.stateText}>{errorMessage}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={fetchTour} activeOpacity={0.85}>
           <Text style={styles.retryBtnText}>Thu lai</Text>
@@ -309,16 +354,20 @@ export const TourDetailScreen: React.FC = () => {
   if (!tour) {
     return renderState(
       <>
-        <Text style={styles.stateTitle}>Khong co du lieu tour</Text>
-        <Text style={styles.stateText}>Tour nay hien chua co thong tin de hien thi.</Text>
+        <Text style={styles.stateTitle}>Không có dữ liệu tour</Text>
+        <Text style={styles.stateText}>Tour này hiện chưa có thông tin để hiển thị.</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={fetchTour} activeOpacity={0.85}>
-          <Text style={styles.retryBtnText}>Thu lai</Text>
+          <Text style={styles.retryBtnText}>Thử lại</Text>
         </TouchableOpacity>
       </>,
     );
   }
 
   const formattedDuration = formatDurationLabel(tour.duration);
+  const displayedDistance =
+    distanceKm === undefined
+      ? '--'
+      : formatTourDistance(distanceKm, distanceKm === null ? null : 'km');
   const displayedRating = reviewSummary.averageRating;
   const displayedReviewCount = reviewSummary.reviewCount;
   const handleOpenRouteMap = () => {
@@ -419,7 +468,7 @@ export const TourDetailScreen: React.FC = () => {
           </View>
           <View style={styles.chip}>
             <Ionicons name="walk-outline" size={14} color="#0A7A4A" />
-            <Text style={styles.chipText}>{tour.distance} km</Text>
+            <Text style={styles.chipText}>{displayedDistance}</Text>
           </View>
           <View style={styles.chip}>
             <Ionicons name="time-outline" size={14} color="#0A7A4A" />
