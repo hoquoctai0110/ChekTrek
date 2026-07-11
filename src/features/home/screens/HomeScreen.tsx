@@ -30,6 +30,7 @@ import { ProviderSosAlert, sosApi } from '@services/api/sos.api';
 import { loadPublicTourCardModels, PublicTourListItem } from '@services/tours/publicTours';
 import { usePublicTourFeedStore } from '@store/publicTourFeedStore';
 import { TOUR_DISPLAY_TEXT } from '@constants/tourDisplay';
+import { useTranslation } from '@hooks/useTranslation';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -95,7 +96,7 @@ export const HomeScreen: React.FC = () => {
   const setOfflineMode = useAuthStore(s => s.setOfflineMode);
   const publicTourFeedVersion = usePublicTourFeedStore(s => s.version);
   const role = user?.role ?? 'TREKKER';
-  const [selectedLang, setSelectedLang] = useState('vi');
+  const { t, language, setLanguage } = useTranslation();
   const [notifications, setNotifications] = useState<
     Array<{ id: string; title: string; body: string; time: string; unread: boolean; icon: string }>
   >([]);
@@ -344,9 +345,9 @@ export const HomeScreen: React.FC = () => {
         {/* Welcome */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>
-            Xin chào, {(user?.name ?? 'Bạn').split(' ').pop()}! 👋
+            {t('welcome')}, {(user?.name ?? 'Bạn').split(' ').pop()}! 👋
           </Text>
-          <Text style={styles.welcomeSubtitle}>Sẵn sàng cho chuyến phiêu lưu tiếp theo?</Text>
+          <Text style={styles.welcomeSubtitle}>{t('ready_for_trek')}</Text>
         </View>
 
         {role === 'TOUR_PROVIDER' ? (
@@ -415,7 +416,7 @@ export const HomeScreen: React.FC = () => {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder={TOUR_DISPLAY_TEXT.searchPlaceholder}
+          placeholder={t('search_placeholder')}
           style={styles.searchBar}
         />
 
@@ -423,17 +424,17 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.statsBanner}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{user?.totalTreks ?? 0}</Text>
-            <Text style={styles.statLabel}>Treks</Text>
+            <Text style={styles.statLabel}>{t('treks')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{user?.totalDistance ?? 0} km</Text>
-            <Text style={styles.statLabel}>{TOUR_DISPLAY_TEXT.distance}</Text>
+            <Text style={styles.statLabel}>{t('distance')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{((user?.totalElevation ?? 0) / 1000).toFixed(1)} km</Text>
-            <Text style={styles.statLabel}>{TOUR_DISPLAY_TEXT.elevation}</Text>
+            <Text style={styles.statLabel}>{t('elevation')}</Text>
           </View>
         </View>
 
@@ -456,9 +457,9 @@ export const HomeScreen: React.FC = () => {
         {/* Featured Tours */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.featuredTours}</Text>
+            <Text style={styles.sectionTitle}>{t('featured_tours')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Discover' as never)} activeOpacity={0.7}>
-              <Text style={styles.seeAll}>{TOUR_DISPLAY_TEXT.seeAll}</Text>
+              <Text style={styles.seeAll}>{t('see_all')}</Text>
             </TouchableOpacity>
           </View>
           {isToursLoading ? (
@@ -501,7 +502,7 @@ export const HomeScreen: React.FC = () => {
         {/* Upcoming Trips */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.upcomingTrips}</Text>
+            <Text style={styles.sectionTitle}>{t('upcoming_trips')}</Text>
             <TouchableOpacity
               onPress={() => {
                 if (role === 'TOUR_PROVIDER') {
@@ -512,7 +513,7 @@ export const HomeScreen: React.FC = () => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.seeAll}>{TOUR_DISPLAY_TEXT.seeAll}</Text>
+              <Text style={styles.seeAll}>{t('see_all')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -526,7 +527,7 @@ export const HomeScreen: React.FC = () => {
         {/* Nearby Destinations */}
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{TOUR_DISPLAY_TEXT.nearbyDestinations}</Text>
+            <Text style={styles.sectionTitle}>{t('nearby_destinations')}</Text>
           </View>
           <EmptyState
             iconName="location-outline"
@@ -557,9 +558,9 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.modalSheet}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Thông báo</Text>
+            <Text style={styles.modalTitle}>{t('notifications')}</Text>
             <TouchableOpacity onPress={markAllRead} activeOpacity={0.7}>
-              <Text style={styles.markAllBtn}>Đánh dấu tất cả đã đọc</Text>
+              <Text style={styles.markAllBtn}>{t('mark_all_read')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.modalDivider} />
@@ -615,23 +616,23 @@ export const HomeScreen: React.FC = () => {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowLang(false)} />
         <View style={styles.langModalCard}>
-          <Text style={styles.modalTitle}>Chọn ngôn ngữ</Text>
+          <Text style={styles.modalTitle}>{t('select_language')}</Text>
           <View style={styles.modalDivider} />
           {LANGUAGES.map(lang => (
             <TouchableOpacity
               key={lang.code}
-              style={[styles.langOption, selectedLang === lang.code && styles.langOptionSelected]}
-              onPress={() => { setSelectedLang(lang.code); setShowLang(false); }}
+              style={[styles.langOption, language === lang.code && styles.langOptionSelected]}
+              onPress={() => { setLanguage(lang.code as any); setShowLang(false); }}
               activeOpacity={0.8}
             >
               <Text style={styles.langFlag}>{lang.flag}</Text>
               <View style={styles.langTextCol}>
-                <Text style={[styles.langLabel, selectedLang === lang.code && styles.langLabelSelected]}>
+                <Text style={[styles.langLabel, language === lang.code && styles.langLabelSelected]}>
                   {lang.label}
                 </Text>
                 <Text style={styles.langNative}>{lang.native}</Text>
               </View>
-              {selectedLang === lang.code && (
+              {language === lang.code && (
                 <Ionicons name="checkmark-circle" size={22} color="#0A7A4A" />
               )}
             </TouchableOpacity>

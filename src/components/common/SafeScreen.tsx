@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, ViewStyle, StatusBar } from 'react-native';
+import { View, StyleSheet, ViewStyle, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@theme/colors';
 
 interface SafeScreenProps {
@@ -15,11 +16,13 @@ export const SafeScreen: React.FC<SafeScreenProps> = ({
   backgroundColor = Colors.background,
   statusBarStyle = 'dark-content',
 }) => {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }, style]}>
-      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+    <View style={[styles.container, { backgroundColor, paddingTop: insets.top }, style]}>
+      <StatusBar barStyle={statusBarStyle} backgroundColor="transparent" translucent />
       {children}
-    </SafeAreaView>
+    </View>
   );
 };
 

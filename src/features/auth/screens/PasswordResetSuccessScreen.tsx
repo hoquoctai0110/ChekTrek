@@ -17,6 +17,7 @@ import { Colors } from '@theme/colors';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
+import { s, vs, ms } from '@utils/responsive';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -118,17 +119,17 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    paddingHorizontal: Spacing[6],
+    paddingHorizontal: s(Spacing[6]),
     alignItems: 'center',
-    gap: Spacing[6],
+    gap: vs(Spacing[6]),
   },
   iconWrapper: {
-    marginTop: Spacing[8],
+    marginTop: vs(Spacing[8]),
   },
   outerRing: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: s(128),
+    height: s(128),
+    borderRadius: s(64),
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -136,47 +137,47 @@ const styles = StyleSheet.create({
     borderColor: '#0A2518',
   },
   innerCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: s(96),
+    height: s(96),
+    borderRadius: s(48),
     backgroundColor: '#0F291E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   textWrapper: {
     alignItems: 'center',
-    gap: Spacing[3],
+    gap: vs(Spacing[3]),
   },
   title: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize['2xl'],
+    fontSize: ms(FontSize['2xl']),
     color: '#0A2518',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: vs(24),
   },
   card: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: Radius.xl,
-    padding: Spacing[5],
-    gap: Spacing[4],
+    padding: s(Spacing[5]),
+    gap: vs(Spacing[4]),
     borderWidth: 1,
     borderColor: '#0A2518',
   },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
+    gap: s(Spacing[3]),
   },
   cardText: {
     fontFamily: FontFamily.medium,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     flex: 1,
   },
@@ -186,12 +187,12 @@ const styles = StyleSheet.create({
   loginBtn: {
     backgroundColor: '#0F291E',
     borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
+    paddingVertical: vs(Spacing[4]),
     alignItems: 'center',
   },
   loginBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: Colors.surfaceWhite,
   },
 });

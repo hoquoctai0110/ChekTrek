@@ -15,6 +15,8 @@ import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { AuthStackParamList } from '@navigation/types';
 import { FontFamily } from '@theme/typography';
 
+import { s, ms } from '@utils/responsive';
+
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Welcome'>;
 
 const { width, height } = Dimensions.get('window');
@@ -76,13 +78,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 140,
-    height: 140,
-    marginBottom: 20,
+    width: s(140),
+    height: s(140),
+    marginBottom: s(20),
   },
   brandText: {
     fontFamily: FontFamily.bold,
-    fontSize: 28,
+    fontSize: ms(28),
     color: '#07332b',
     letterSpacing: 2,
   },

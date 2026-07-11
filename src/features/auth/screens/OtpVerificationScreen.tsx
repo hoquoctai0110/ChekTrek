@@ -23,7 +23,8 @@ import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { OtpInput } from '../components/OtpInput';
-
+import { useAuthStore } from '@store/authStore';
+import { s, vs, ms } from '@utils/responsive';
 type NavProp = NativeStackNavigationProp<AuthStackParamList>;
 type RoutePropType = RouteProp<AuthStackParamList, 'OtpVerification'>;
 
@@ -275,15 +276,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: Spacing[5],
+    paddingHorizontal: s(Spacing[5]),
   },
   topBar: {
-    paddingVertical: Spacing[2],
+    paddingVertical: vs(Spacing[2]),
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: s(40),
+    height: s(40),
+    borderRadius: s(20),
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -292,17 +293,17 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: Spacing[4],
+    paddingTop: vs(Spacing[4]),
     alignItems: 'center',
-    gap: Spacing[5],
+    gap: vs(Spacing[5]),
   },
   iconWrapper: {
-    marginBottom: Spacing[2],
+    marginBottom: vs(Spacing[2]),
   },
   iconBg: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: s(96),
+    height: s(96),
+    borderRadius: s(48),
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,16 +312,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize['2xl'],
+    fontSize: ms(FontSize['2xl']),
     color: '#0A2518',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: vs(24),
   },
   emailHighlight: {
     fontFamily: FontFamily.bold,
@@ -329,12 +330,12 @@ const styles = StyleSheet.create({
   },
   otpWrapper: {
     width: '100%',
-    gap: Spacing[3],
+    gap: vs(Spacing[3]),
     alignItems: 'center',
   },
   errorText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: Colors.error,
     textAlign: 'center',
     lineHeight: 20,
@@ -344,13 +345,13 @@ const styles = StyleSheet.create({
   },
   resendBtn: {
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textDecorationLine: 'underline',
   },
   countdownText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
   },
   countdownNumber: {
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#0F291E',
     borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
+    paddingVertical: vs(Spacing[4]),
     alignItems: 'center',
   },
   verifyBtnDisabled: {
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   },
   verifyBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: Colors.surfaceWhite,
   },
 });

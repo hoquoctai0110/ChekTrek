@@ -8,6 +8,7 @@ import { AuthNavigator } from './AuthNavigator';
 import { useAuthStore } from '@store/authStore';
 import { offlineSosQueue } from '@services/offline/offlineSosQueue';
 import { offlineTrackingQueue } from '@services/offline/offlineTrackingQueue';
+import { useLanguageStore } from '@store/languageStore';
 import { Colors } from '@theme/colors';
 
 // ── Phase 1: Existing screens ────────────────────────────────────────────────
@@ -57,11 +58,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export const RootNavigator: React.FC = () => {
   const { isAuthenticated, isLoading, isOfflineMode, restoreSession, setOfflineMode, resumeOnlineMode } =
     useAuthStore();
+  const loadLanguage = useLanguageStore(s => s.loadLanguage);
   const wasOfflineRef = useRef(false);
 
   useEffect(() => {
     restoreSession();
-  }, [restoreSession]);
+    loadLanguage();
+  }, [restoreSession, loadLanguage]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {

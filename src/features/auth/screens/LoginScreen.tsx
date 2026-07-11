@@ -30,6 +30,7 @@ import { AuthInput } from '../components/AuthInput';
 import { PasswordInput } from '../components/PasswordInput';
 import { SocialLoginButton } from '../components/SocialLoginButton';
 import { loginSchema, LoginFormData } from '../validations/auth.validation';
+import { s, vs, ms } from '@utils/responsive';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -252,33 +253,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[8],
+    paddingHorizontal: s(Spacing[5]),
+    gap: vs(Spacing[8]),
   },
   header: {
     alignItems: 'center',
-    gap: Spacing[2],
+    gap: vs(Spacing[2]),
   },
   logo: {
-    width: 64,
-    height: 64,
-    marginBottom: Spacing[1],
+    width: s(64),
+    height: s(64),
+    marginBottom: vs(Spacing[1]),
   },
   logoText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
     letterSpacing: 2,
-    marginBottom: Spacing[4],
+    marginBottom: vs(Spacing[4]),
   },
   title: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize['3xl'],
+    fontSize: ms(FontSize['3xl']),
     color: '#0A2518',
     textAlign: 'center',
   },
   formContainer: {
-    gap: Spacing[4],
+    gap: vs(Spacing[4]),
   },
   offlineBanner: {
     flexDirection: 'row',
@@ -313,30 +314,30 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   loginBtn: {
     backgroundColor: '#0F291E',
     borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
+    paddingVertical: vs(Spacing[4]),
     alignItems: 'center',
-    marginTop: Spacing[2],
+    marginTop: vs(Spacing[2]),
   },
   loginBtnDisabled: {
     opacity: 0.7,
   },
   loginBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
+    fontSize: ms(FontSize.md),
     color: Colors.surfaceWhite,
     textTransform: 'uppercase',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
-    marginVertical: Spacing[2],
+    gap: s(Spacing[3]),
+    marginVertical: vs(Spacing[2]),
   },
   dividerLine: {
     flex: 1,
@@ -345,23 +346,23 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   registerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing[4],
+    marginTop: vs(Spacing[4]),
   },
   registerText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
   },
   registerLink: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textDecorationLine: 'underline',
   },

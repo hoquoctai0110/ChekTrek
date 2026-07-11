@@ -14,8 +14,10 @@ import {
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeScreen } from '@components/common/SafeScreen';
 import { PrimaryButton } from '@components/buttons/PrimaryButton';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 import { Colors } from '@theme/colors';
 import { FontFamily, FontSize } from '@theme/typography';
 import { Spacing } from '@theme/spacing';
@@ -148,6 +150,7 @@ const mapBackendCheckoutTour = (tour: BackendCheckoutTour, fallbackId: string): 
 export const BookingScreen: React.FC = () => {
   const route = useRoute<BookingRouteProp>();
   const navigation = useNavigation<BookingNavProp>();
+  const insets = useSafeAreaInsets();
   const [participants, setParticipants] = useState(1);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -321,7 +324,20 @@ export const BookingScreen: React.FC = () => {
   };
 
   return (
-    <SafeScreen>
+    <SafeScreen backgroundColor="transparent">
+      {/* ── Gradient Background ── */}
+      <View style={StyleSheet.absoluteFill}>
+        <Svg height="100%" width="100%">
+          <Defs>
+            <SvgLinearGradient id="bgGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#E5F9CE" />
+              <Stop offset="100%" stopColor="#A2EDB4" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#bgGrad)" />
+        </Svg>
+      </View>
+
       {/* Header */}
       {renderHeader()}
 
@@ -459,24 +475,38 @@ export const BookingScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Book & Cancel Buttons */}
-      <View style={styles.footer}>
+      {/* Book Button */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
         <View>
           <Text style={styles.footerTotal}>{total.toLocaleString('vi-VN')}đ</Text>
           <Text style={styles.footerLabel}>{participants} người</Text>
         </View>
-        <View style={styles.footerActions}>
-          <PrimaryButton
-            title="Tiếp theo →"
-            onPress={handleBook}
-            disabled={!canContinue}
-            isLoading={isBooking}
-            style={styles.bookBtn}
-          />
-          <TouchableOpacity style={styles.cancelLink} onPress={handleCancel} activeOpacity={0.7}>
-            <Text style={styles.cancelLinkText}>Không đặt nữa</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.bookBtnGradient, (!canContinue || isBooking) && { opacity: 0.6 }]}
+          onPress={handleBook}
+          activeOpacity={0.85}
+          disabled={!canContinue || isBooking}
+        >
+          {/* Gradient button */}
+          <View style={StyleSheet.absoluteFill}>
+            <Svg height="100%" width="100%">
+              <Defs>
+                <SvgLinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#00F582" />
+                  <Stop offset="100%" stopColor="#E3F53C" />
+                </SvgLinearGradient>
+              </Defs>
+              <Rect
+                width="100%"
+                height="100%"
+                fill={(!canContinue || isBooking) ? '#CCCCCC' : 'url(#btnGrad)'}
+                rx={24}
+                ry={24}
+              />
+            </Svg>
+          </View>
+          <Text style={styles.bookBtnText}>{isBooking ? 'Đang xử lý...' : 'Tiếp theo →'}</Text>
+        </TouchableOpacity>
       </View>
     </SafeScreen>
   );
@@ -489,9 +519,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[4],
     paddingTop: Spacing[2],
     paddingBottom: Spacing[3],
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant + '20',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
   },
   backBtn: {
     width: 40,
@@ -543,7 +572,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     padding: Spacing[4],
@@ -740,22 +769,23 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.onSurfaceVariant,
   },
-  bookBtn: {
+  bookBtnGradient: {
+    height: 48,
     minWidth: 140,
-  },
-  footerActions: {
-    flexDirection: 'column',
+    borderRadius: 24,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing[1],
-    minWidth: 140,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#00F582',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
-  cancelLink: {
-    paddingVertical: 2,
-  },
-  cancelLinkText: {
+  bookBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.xs,
-    color: '#EF4444',
-    textDecorationLine: 'underline',
+    fontSize: FontSize.base,
+    color: '#0A2518',
+    zIndex: 1,
   },
 });

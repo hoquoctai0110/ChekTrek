@@ -34,6 +34,7 @@ import {
   RegisterFormData,
   TREKKING_EXPERIENCE_OPTIONS,
 } from '../validations/auth.validation';
+import { s, vs, ms } from '@utils/responsive';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList>;
 type AccountType = 'trekker' | 'provider';
@@ -428,44 +429,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[4],
+    paddingHorizontal: s(Spacing[5]),
+    gap: vs(Spacing[4]),
   },
   header: {
     alignItems: 'center',
-    gap: Spacing[1],
+    gap: vs(Spacing[1]),
   },
   logo: {
-    width: 64,
-    height: 64,
-    marginBottom: Spacing[1],
+    width: s(64),
+    height: s(64),
+    marginBottom: vs(Spacing[1]),
   },
   logoText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.xs,
+    fontSize: ms(FontSize.xs),
     color: '#0A2518',
     letterSpacing: 1,
   },
   title: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize['3xl'],
+    fontSize: ms(FontSize['3xl']),
     color: '#0A2518',
     textAlign: 'center',
-    marginTop: Spacing[2],
+    textTransform: 'uppercase',
+    marginTop: vs(Spacing[2]),
   },
   roleContainer: {
-    gap: Spacing[2],
+    gap: vs(Spacing[2]),
   },
   roleLabel: {
     fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   roleToggle: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: Radius.full,
-    padding: 4,
+    padding: s(4),
     borderWidth: 1,
     borderColor: '#0A2518',
   },
@@ -474,16 +476,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing[2],
+    paddingVertical: vs(Spacing[2]),
     borderRadius: Radius.full,
-    gap: Spacing[2],
+    gap: s(Spacing[2]),
   },
   roleBtnActive: {
     backgroundColor: '#0F291E',
   },
   roleBtnText: {
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   roleBtnTextActive: {
@@ -496,24 +498,26 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   formContainer: {
-    gap: Spacing[3],
+    gap: vs(Spacing[3]),
   },
   experienceContainer: {
-    gap: Spacing[2],
+    gap: vs(Spacing[2]),
+    marginTop: vs(Spacing[1]),
   },
   experienceLabel: {
     fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   experienceRow: {
     flexDirection: 'row',
-    gap: Spacing[2],
+    justifyContent: 'space-between',
+    gap: s(Spacing[2]),
   },
   expPill: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    paddingVertical: Spacing[2],
+    paddingVertical: vs(Spacing[2]),
     borderRadius: Radius.full,
     alignItems: 'center',
     borderWidth: 1,
@@ -524,7 +528,7 @@ const styles = StyleSheet.create({
   },
   expPillText: {
     fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
+    fontSize: ms(FontSize.xs),
     color: '#0A2518',
   },
   expPillTextActive: {
@@ -536,31 +540,55 @@ const styles = StyleSheet.create({
     color: '#0A2518',
     lineHeight: 18,
   },
+  cccdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: s(Spacing[4]),
+    marginTop: vs(Spacing[1]),
+  },
+  cccdLabel: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: ms(FontSize.base),
+    color: '#0A2518',
+    lineHeight: 18,
+  },
   errorText: {
     fontFamily: FontFamily.regular,
     fontSize: FontSize.xs,
     color: Colors.error,
   },
+  uploadBtn: {
+    backgroundColor: Colors.surfaceWhite,
+    paddingVertical: vs(Spacing[2]),
+    paddingHorizontal: s(Spacing[5]),
+    borderRadius: Radius.md,
+  },
+  uploadBtnText: {
+    fontFamily: FontFamily.medium,
+    fontSize: ms(FontSize.sm),
+    color: '#0A2518',
+  },
   registerBtn: {
     backgroundColor: '#0F291E',
     borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
+    paddingVertical: vs(Spacing[4]),
     alignItems: 'center',
-    marginTop: Spacing[4],
+    marginTop: vs(Spacing[4]),
   },
   registerBtnDisabled: {
     opacity: 0.7,
   },
   registerBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
+    fontSize: ms(FontSize.md),
     color: Colors.surfaceWhite,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
-    marginVertical: Spacing[2],
+    gap: s(Spacing[3]),
+    marginVertical: vs(Spacing[2]),
   },
   dividerLine: {
     flex: 1,
@@ -569,23 +597,23 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.sm,
+    fontSize: ms(FontSize.sm),
     color: '#0A2518',
   },
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing[2],
+    marginTop: vs(Spacing[2]),
   },
   loginText: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
   },
   loginLink: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textDecorationLine: 'underline',
   },

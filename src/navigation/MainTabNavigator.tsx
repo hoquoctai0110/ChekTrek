@@ -6,6 +6,7 @@ import { Colors } from '@theme/colors';
 import { Shadows } from '@theme/shadows';
 import { FontFamily } from '@theme/typography';
 import { useAuthStore } from '@store/authStore';
+import { useTranslation } from '@hooks/useTranslation';
 
 // Screen imports
 import { HomeScreen } from '@features/home/screens/HomeScreen';
@@ -51,150 +52,158 @@ const TabIcon: React.FC<TabIconProps> = ({ name, focused, focusedName }) => {
 };
 
 // ─── Trekker Tabs ─────────────────────────────────────────────────────────────
-const TrekkerTabs: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{
-      headerShown: false,
-      tabBarStyle: {
-        ...styles.tabBar,
-        ...(Shadows.navbar as object),
-      },
-      tabBarActiveTintColor: Colors.primary,
-      tabBarInactiveTintColor: Colors.onSurfaceVariant,
-      tabBarLabelStyle: styles.tabLabel,
-      tabBarHideOnKeyboard: true,
-    }}
-  >
-    <Tab.Screen
-      name="Home"
-      component={HomeScreen}
-      options={{
-        tabBarLabel: 'Trang Chủ',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="home-outline" focusedName="home" focused={focused} />
-        ),
+const TrekkerTabs: React.FC = () => {
+  const { t } = useTranslation();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          ...styles.tabBar,
+          ...(Shadows.navbar as object),
+        },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.onSurfaceVariant,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarHideOnKeyboard: true,
       }}
-    />
-    <Tab.Screen
-      name="BookTour"
-      component={BookTourScreen}
-      options={{
-        tabBarLabel: 'Đặt tour',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="calendar-outline" focusedName="calendar" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Community"
-      component={CommunityScreen}
-      options={{
-        tabBarLabel: 'Cộng đồng',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="chatbubbles-outline" focusedName="chatbubbles" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Saved"
-      component={SavedScreen}
-      options={{
-        tabBarLabel: 'Đã lưu',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="heart-outline" focusedName="heart" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="OfflineRoutes"
-      component={OfflineRoutesScreen}
-      options={{
-        tabBarLabel: 'Offline',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="cloud-offline-outline" focusedName="cloud" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{
-        tabBarLabel: 'Cá nhân',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="person-outline" focusedName="person" focused={focused} />
-        ),
-      }}
-    />
-  </Tab.Navigator>
-);
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: t('tab_home'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home-outline" focusedName="home" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="BookTour"
+        component={BookTourScreen}
+        options={{
+          tabBarLabel: t('tab_book_tour'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="calendar-outline" focusedName="calendar" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={{
+          tabBarLabel: t('tab_community'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="chatbubbles-outline" focusedName="chatbubbles" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Saved"
+        component={SavedScreen}
+        options={{
+          tabBarLabel: t('tab_saved'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="heart-outline" focusedName="heart" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="OfflineRoutes"
+        component={OfflineRoutesScreen}
+        options={{
+          tabBarLabel: t('tab_offline'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="cloud-offline-outline" focusedName="cloud" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: t('tab_profile'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="person-outline" focusedName="person" focused={focused} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 // ─── Tour Provider Tabs ────────────────────────────────────────────────────────
-const ProviderTabs: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{
-      headerShown: false,
-      tabBarStyle: {
-        ...styles.tabBar,
-        ...(Shadows.navbar as object),
-      },
-      tabBarActiveTintColor: Colors.primary,
-      tabBarInactiveTintColor: Colors.onSurfaceVariant,
-      tabBarLabelStyle: styles.tabLabel,
-      tabBarHideOnKeyboard: true,
-    }}
-  >
-    <Tab.Screen
-      name="Home"
-      component={HomeScreen}
-      options={{
-        tabBarLabel: 'Trang chủ',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="home-outline" focusedName="home" focused={focused} />
-        ),
+const ProviderTabs: React.FC = () => {
+  const { t } = useTranslation();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          ...styles.tabBar,
+          ...(Shadows.navbar as object),
+        },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.onSurfaceVariant,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarHideOnKeyboard: true,
       }}
-    />
-    <Tab.Screen
-      name="Discover"
-      component={DiscoverScreen}
-      options={{
-        tabBarLabel: 'Khám phá',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="compass-outline" focusedName="compass" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Community"
-      component={CommunityScreen}
-      options={{
-        tabBarLabel: 'Cộng đồng',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="people-outline" focusedName="people" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Trips"
-      component={ProviderTripsTabScreen}
-      options={{
-        tabBarLabel: 'Chuyến đi',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="map-outline" focusedName="map" focused={focused} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{
-        tabBarLabel: 'Hồ sơ',
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name="person-outline" focusedName="person" focused={focused} />
-        ),
-      }}
-    />
-  </Tab.Navigator>
-);
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: t('tab_home'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home-outline" focusedName="home" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{
+          tabBarLabel: t('tab_discover'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="compass-outline" focusedName="compass" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={{
+          tabBarLabel: t('tab_community'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="people-outline" focusedName="people" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Trips"
+        component={ProviderTripsTabScreen}
+        options={{
+          tabBarLabel: t('tab_trips'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="map-outline" focusedName="map" focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: t('tab_profile'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="person-outline" focusedName="person" focused={focused} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 // ─── Root Tab Navigator (role-aware) ─────────────────────────────────────────
 const OfflineTabs: React.FC = () => (

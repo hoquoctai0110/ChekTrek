@@ -24,6 +24,7 @@ import { Spacing } from '@theme/spacing';
 import { Radius } from '@theme/radius';
 import { AuthInput } from '../components/AuthInput';
 import { forgotPasswordSchema, ForgotPasswordFormData } from '../validations/auth.validation';
+import { s, vs, ms } from '@utils/responsive';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -158,13 +159,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[6],
+    paddingHorizontal: s(Spacing[5]),
+    gap: vs(Spacing[6]),
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: s(40),
+    height: s(40),
+    borderRadius: s(20),
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -173,12 +174,12 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     alignItems: 'center',
-    paddingTop: Spacing[4],
+    paddingTop: vs(Spacing[4]),
   },
   iconBg: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: s(88),
+    height: s(88),
+    borderRadius: s(44),
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -187,24 +188,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize['2xl'],
+    fontSize: ms(FontSize['2xl']),
     color: '#0A2518',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FontFamily.regular,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: vs(24),
   },
   formContainer: {
-    gap: Spacing[4],
+    gap: vs(Spacing[4]),
   },
   sendBtn: {
     backgroundColor: '#0F291E',
     borderRadius: Radius.button,
-    paddingVertical: Spacing[4],
+    paddingVertical: vs(Spacing[4]),
     alignItems: 'center',
   },
   sendBtnDisabled: {
@@ -212,18 +213,18 @@ const styles = StyleSheet.create({
   },
   sendBtnText: {
     fontFamily: FontFamily.bold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: Colors.surfaceWhite,
   },
   backToLoginRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing[2],
+    gap: s(Spacing[2]),
   },
   backToLoginText: {
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.base,
+    fontSize: ms(FontSize.base),
     color: '#0A2518',
   },
 });

@@ -536,7 +536,6 @@ export const TourDetailScreen: React.FC = () => {
 
         {/* Content Card */}
         <View style={styles.contentCard}>
-          <Text style={styles.tourTitle}>{tour.title}</Text>
           <Text style={styles.description}>{tour.description}</Text>
 
           {/* Guide */}
@@ -818,18 +817,8 @@ const styles = StyleSheet.create({
   // ── Content Card ──────────────────────────────────────────────────────────
   contentCard: {
     marginHorizontal: Spacing[4],
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderRadius: Radius.xl,
-    padding: Spacing[5],
     gap: Spacing[4],
     marginBottom: Spacing[4],
-    borderWidth: 1,
-    borderColor: 'rgba(10,37,24,0.08)',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
   },
   tourTitle: {
     fontFamily: FontFamily.bold,
@@ -840,40 +829,33 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: FontFamily.regular,
     fontSize: FontSize.sm,
-    color: 'rgba(10,37,24,0.7)',
+    color: '#0A2518',
     lineHeight: 22,
+    textAlign: 'justify',
   },
   guideRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[3],
-    paddingTop: Spacing[3],
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(10,37,24,0.08)',
+    paddingTop: Spacing[2],
   },
   guideInfo: {
     flex: 1,
     gap: 2,
   },
   guideName: {
-    fontFamily: FontFamily.semiBold,
+    fontFamily: FontFamily.bold,
     fontSize: FontSize.md,
     color: '#0A2518',
   },
   guideRole: {
     fontFamily: FontFamily.regular,
     fontSize: FontSize.xs,
-    color: '#0A7A4A',
+    color: '#0A2518',
+    opacity: 0.8,
   },
   contactBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0,200,83,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(10,122,74,0.2)',
+    display: 'none',
   },
 
   // ── Reviews ───────────────────────────────────────────────────────────────
